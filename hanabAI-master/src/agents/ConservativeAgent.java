@@ -62,17 +62,34 @@ public class ConservativeAgent implements Agent{
 		//e.g. make a move if we have a utility of "4"
 		for(int i = 0; i < utility.length; i++)
 		{
+			if(utility[i] == 5)
+			{ 
+					try {
+						//re-initialise relevant hint arrays..
+				        colours[i] = null;
+				        values[i] = 0;
+						return new Action(index, toString(), ActionType.PLAY, i);
+					} 
+					catch (IllegalActionException e) 
+					{
+						e.printStackTrace();
+					}
+			}
 			if(utility[i] == 4)
 			{ 
-				try {
-					//re-initialise relevant hint arrays..
-			        colours[i] = null;
-			        values[i] = 0;
-					return new Action(index, toString(), ActionType.PLAY, i);
-				} 
-				catch (IllegalActionException e) 
+				Card tempcard = new Card(colours[i],values[i]);
+				if(playable(s,tempcard) == 1)
 				{
-					e.printStackTrace();
+					try {
+						//re-initialise relevant hint arrays..
+				        colours[i] = null;
+				        values[i] = 0;
+						return new Action(index, toString(), ActionType.PLAY, i);
+					} 
+					catch (IllegalActionException e) 
+					{
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -114,74 +131,66 @@ public class ConservativeAgent implements Agent{
 					//check if you have given a hint about this card before to this specific player
 					//give a hint to the player
 					//0 -> hint colour, 1-> hint value
-					int hinttype;
-					if(Math.random()>0.5) {hinttype=0;}else{hinttype=1;}
 					
+					//int hinttype;
+					//if(Math.random()>0.5) {hinttype=0;}else{hinttype=1;}
+					boolean[] h1c = makecolourbool(playersHand, playableCard);
+					boolean[] h2c = makevalbool(playersHand, playableCard);
 					//if this hint is not in memory
-					if(!inMemory(i, hinttype, playableCard))
+					if(!memory.contains(hint2string(i,1,playableCard.getValue(),h2c)))
 					{
-						//hint colour
-						if (hinttype==0) {
-							
-							//make the boolean array
-							boolean[] hinthand = new boolean[numCards];
-							
-							for(int v = 0; v<numCards;v++)
-							{
-								
-								//if the players hand is null - ignore it (we've started running out of cards)
-								if(playersHand[v] == null)
-								{
-									hinthand[v] = false;
-								}
-								//if the colour in the players hand is the colour we want to give a hint about...
-								else if(playersHand[v].getColour().equals(playableCard.getColour()))
-								{
-									hinthand[v]=true;
-								}
-								else 
-								{
-									hinthand[v]=false;
-								}
-							}
-							try {
-								//return the action to do a hint
-								return new Action(index,toString(),ActionType.HINT_COLOUR,i,hinthand,playableCard.getColour());
-							} 
-							catch (IllegalActionException e) 
-							{
-								e.printStackTrace();
-							}
-						}
-						//hint value
-						else 
+						try 
 						{
-							boolean[] hinthand = new boolean[numCards];
-							for(int v = 0; v<numCards;v++)
-							{
-								//if the players hand is null - ignore it (we've started running out of cards)
-								if(playersHand[v] == null)
-								{
-									hinthand[v] = false;
-								} 
-								//if the value in the players hand is the value we want to give a hint about...
-								else if(playersHand[v].getValue()==playableCard.getValue())
-								{
-									hinthand[v]=true;
-								}
-								else 
-								{
-									hinthand[v]=false;
-								}
-							}
-							try 
-							{
-								return new Action(index,toString(),ActionType.HINT_VALUE,i,hinthand,playableCard.getValue());
-							} 
-							catch (IllegalActionException e) 
-							{
-								e.printStackTrace();
-							}
+							memory.add(hint2string(i,1,playableCard.getValue(),h2c));
+							return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playableCard.getValue());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}else if(!memory.contains(hint2string(i,0,playableCard.getColour(),h1c))) 
+					{
+						try {
+							//return the action to do a hint
+							memory.add(hint2string(i,0,playableCard.getColour(),h1c));
+							return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playableCard.getColour());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}
+				}
+				//~Hint tokens cannot exceed 8, our agents should now also give hints for hands that will reveal the most amount of info
+				else //if(s.getHintTokens()>=1)
+				{
+					Card playableCard;
+					switch(playersUtility[j])
+					{
+					case 30: 
+						playableCard = playersHand[j];
+						boolean[] h1c = makecolourbool(playersHand, playableCard);
+						try {
+							//return the action to do a hint
+							memory.add(hint2string(i,0,playableCard.getColour(),h1c));
+							return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playableCard.getColour());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					
+					case 31:
+						playableCard = playersHand[j];
+						boolean[] h2c = makevalbool(playersHand, playableCard);
+						try 
+						{
+							memory.add(hint2string(i,1,playableCard.getValue(),h2c));
+							return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playableCard.getValue());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
 						}
 					}
 				}
@@ -263,6 +272,16 @@ public class ConservativeAgent implements Agent{
 	        	
 	          Action a = t.getPreviousAction();
 	          
+	          //~add previous player's hints to memory too
+	          if(a.getType()==ActionType.HINT_COLOUR && a.getHintReceiver()!=index)
+	          {
+	        	  	memory.add(hint2string(a.getHintReceiver(),0,a.getColour(),a.getHintedCards()));
+	          }
+	          if(a.getType()==ActionType.HINT_VALUE && a.getHintReceiver()!=index)
+	          {
+	        	  	memory.add(hint2string(a.getHintReceiver(),1,a.getValue(),a.getHintedCards()));
+	          }
+	          
 	          //if any of these actions are of type "hint"
 	          if((a.getType()==ActionType.HINT_COLOUR || a.getType() == ActionType.HINT_VALUE) && a.getHintReceiver()==index){
 	            
@@ -324,6 +343,7 @@ public class ConservativeAgent implements Agent{
 		{
 			numEmptyStacks++;
 			info.put("BLUE", 0);
+			minimumCardValue = 0;
 		}
 		else
 		{
@@ -338,6 +358,7 @@ public class ConservativeAgent implements Agent{
 		{
 			numEmptyStacks++;
 			info.put("GREEN", 0);
+			minimumCardValue = 0;
 		}
 		else
 		{
@@ -352,6 +373,7 @@ public class ConservativeAgent implements Agent{
 		{
 			numEmptyStacks++;
 			info.put("RED", 0);
+			minimumCardValue = 0;
 		}
 		else
 		{
@@ -365,6 +387,7 @@ public class ConservativeAgent implements Agent{
 		{
 			numEmptyStacks++;
 			info.put("WHITE", 0);
+			minimumCardValue = 0;
 		}
 		else
 		{
@@ -378,6 +401,7 @@ public class ConservativeAgent implements Agent{
 		{
 			numEmptyStacks++;
 			info.put("YELLOW", 0);
+			minimumCardValue = 0;
 		}
 		else
 		{
@@ -429,7 +453,7 @@ public class ConservativeAgent implements Agent{
 			//if we know we have a one and the number of empty stacks is 5
 			if(values[i] == 1 && struct.get("EMPTYSTACKS") == 5)
 			{
-				utility[i] = 4;
+				utility[i] = 5;
 			}
 			
 			//if we have a number which is smaller than the minimum number on ALL the decks - discard it
@@ -471,6 +495,32 @@ public class ConservativeAgent implements Agent{
 			{
 				utility[i] = 4;
 			}
+			
+			//~now prioritize which cards hints will give the most information
+			//~if hint will reveal 4 cards, very useful
+			//~relaxing hints beyond that may decrease score, but necessary when there is an excess of hints
+			//~tweak individual values to see what works
+			//~IDEA! Make two loops, if no viewable card is playable then instead check for the card of maximum information
+			if(boolcount(makecolourbool(c,c[i]))>=4)
+			{
+				utility[i] = 30;
+			}else
+			if(boolcount(makevalbool(c,c[i]))>=4)
+			{
+				utility[i] = 31;
+			}
+			if(s.getHintTokens()==8)
+			{
+				if(boolcount(makecolourbool(c,c[i]))>=3)
+				{
+					utility[i] = 30;
+				}else
+				if(boolcount(makevalbool(c,c[i]))>=3)
+				{
+					utility[i] = 31;
+				}
+			}
+			
 						
 		}
 		
@@ -573,6 +623,16 @@ public class ConservativeAgent implements Agent{
 		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+thiscard.toString();
 		return memkey;
 	}
+	public String hint2string(int receiver, int colOrVal, Colour c, boolean[] hand)
+	{
+		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+c.toString()+Arrays.toString(hand);
+		return memkey;
+	}
+	public String hint2string(int receiver, int colOrVal, int val, boolean[] hand)
+	{
+		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+Integer.toString(val)+Arrays.toString(hand);
+		return memkey;
+	}
 	
 	/**
 	 * @return - true if the hint has been given (i.e. is in memory) or false if the hint has not been given
@@ -589,6 +649,62 @@ public class ConservativeAgent implements Agent{
 	public String toString()
 	{
 		return "ConservativeAgent";
+	}
+	public boolean[] makecolourbool (Card[] playersHand, Card playableCard)
+	{
+		//make the boolean array
+		boolean[] hinthand = new boolean[numCards];
+		
+		for(int v = 0; v<numCards;v++)
+		{
+			
+			//if the players hand is null - ignore it (we've started running out of cards)
+			if(playersHand[v] == null)
+			{
+				hinthand[v] = false;
+			}
+			//if the colour in the players hand is the colour we want to give a hint about...
+			else if(playersHand[v].getColour().equals(playableCard.getColour()))
+			{
+				hinthand[v]=true;
+			}
+			else 
+			{
+				hinthand[v]=false;
+			}
+		}
+		return hinthand;
+	}
+	
+	public boolean[] makevalbool (Card[] playersHand, Card playableCard)
+	{
+		boolean[] hinthand = new boolean[numCards];
+		for(int v = 0; v<numCards;v++)
+		{
+			//if the players hand is null - ignore it (we've started running out of cards)
+			if(playersHand[v] == null)
+			{
+				hinthand[v] = false;
+			} 
+			//if the value in the players hand is the value we want to give a hint about...
+			else if(playersHand[v].getValue()==playableCard.getValue())
+			{
+				hinthand[v]=true;
+			}
+			else 
+			{
+				hinthand[v]=false;
+			}
+		}
+		return hinthand;
+	}
+	public int boolcount (boolean[] bools)
+	{
+		int sum = 0;
+		for(boolean b : bools) {
+		    sum += b ? 1 : 0;
+		}
+		return sum;
 	}
 	
 }
