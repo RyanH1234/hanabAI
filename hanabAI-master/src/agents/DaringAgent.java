@@ -1,7 +1,9 @@
 package agents;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Stack;
 
 import hanabAI.Action;
 import hanabAI.ActionType;
@@ -12,6 +14,10 @@ import hanabAI.Hanabi;
 import hanabAI.IllegalActionException;
 import hanabAI.State;
 
+
+/**
+ * NEED TO EXTEND THE CLASS FOR SIMULATIONS!!
+ */
 public class DaringAgent implements Agent{
 
 	//records whether this is the first action the agent is taken
@@ -156,18 +162,57 @@ public class DaringAgent implements Agent{
 		getHints(s);
 		
 		//return the best action based on the MCTS...
-		Action bestAction = MCTS(s);
+		try {
+			Action bestAction = initialiseMCTS(s);
+		} catch (IllegalActionException e) {
+			e.printStackTrace();
+		}
 		
 		return null;
 	}
 
 	/**
-	 * Performs the MCTS algorithm returning the best action 
+	 * Initialises the tree for the MCTS
 	 * @param currentState - current state of the game
 	 * @return - the best Action based on the algorithms tree search
+	 * @throws IllegalActionException 
 	 */
-	public Action MCTS(State currentState)
+	public Action initialiseMCTS(State currentState) throws IllegalActionException
 	{
+		//create the root node of the tree
+		Node rootNode = new Node(currentState);
+		
+		//<Child Node, Parent Node>
+		HashMap<Node, Node> tree = new HashMap<Node, Node>();
+		
+		//deck?? - not sure what this is meant to be...
+		Stack<Card> deck = new Stack<Card>();
+		
+		//get an array of all the possible actions for the rootNode
+		Action[] possibleActions = availableActions(currentState, index);
+		
+		//stores the parentNode
+		Node parentNode = rootNode;
+		
+		//for each of the possible actions for this agent - add it to the tree
+		for(int i = 0; i < possibleActions.length;i++)
+		{
+			State nextState = currentState.nextState(possibleActions[i], deck);
+			Node childNode = new Node(nextState);
+			tree.put(childNode,parentNode);
+		}
+				
+		return null;
+	}
+	
+	/**
+	 * @param tree
+	 * @param parentNode
+	 * @return
+	 */
+	public Action recursiveMCTS(HashMap<Node, Node> tree, Node parentNode)
+	{
+		
 		return null;
 	}
 	
@@ -177,8 +222,18 @@ public class DaringAgent implements Agent{
 	 * @param playerIndex - index of the player
 	 * @return - a list of actions which the current player can play
 	 */
-	public Action availableActions(State currentState, int playerIndex)
+	public Action[] availableActions(State currentState, int playerIndex)
 	{
+		//if the current player is THIS agent
+		if(playerIndex == index)
+		{
+			
+		}
+		else
+		{
+			
+		}
+		
 		return null;
 	}
 	
