@@ -1,8 +1,10 @@
 package agents;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Stack;
 
 import hanabAI.Action;
@@ -14,10 +16,6 @@ import hanabAI.Hanabi;
 import hanabAI.IllegalActionException;
 import hanabAI.State;
 
-
-/**
- * NEED TO EXTEND THE CLASS FOR SIMULATIONS!!
- */
 public class DaringAgent implements Agent{
 
 	//records whether this is the first action the agent is taken
@@ -162,9 +160,12 @@ public class DaringAgent implements Agent{
 		getHints(s);
 		
 		//return the best action based on the MCTS...
-		try {
-			Action bestAction = initialiseMCTS(s);
-		} catch (IllegalActionException e) {
+		try 
+		{
+			return MCTS(s);
+		} 
+		catch (IllegalActionException e) 
+		{
 			e.printStackTrace();
 		}
 		
@@ -172,49 +173,135 @@ public class DaringAgent implements Agent{
 	}
 
 	/**
-	 * Initialises the tree for the MCTS
+	 * Implements the Monte Carlo Tree Search
 	 * @param currentState - current state of the game
 	 * @return - the best Action based on the algorithms tree search
 	 * @throws IllegalActionException 
 	 */
-	public Action initialiseMCTS(State currentState) throws IllegalActionException
-	{
+	public Action MCTS(State currentState) throws IllegalActionException
+	{		
 		//create the root node of the tree
-		Node rootNode = new Node(currentState);
+		Node rootNode = new Node(currentState, null, null);
 		
-		//<Child Node, Parent Node>
-		HashMap<Node, Node> tree = new HashMap<Node, Node>();
-		
-		//deck?? - not sure what this is meant to be...
-		Stack<Card> deck = new Stack<Card>();
-		
-		//get an array of all the possible actions for the rootNode
-		Action[] possibleActions = availableActions(currentState, index);
-		
-		//stores the parentNode
-		Node parentNode = rootNode;
-		
-		//for each of the possible actions for this agent - add it to the tree
-		for(int i = 0; i < possibleActions.length;i++)
+		//add children to rootNode - availableActions()
+		Action[] availableActions = availableActions(currentState, index);
+		for(int i = 0; i < availableActions.length; i++)
 		{
-			State nextState = currentState.nextState(possibleActions[i], deck);
-			Node childNode = new Node(nextState);
-			tree.put(childNode,parentNode);
+			//??
+			Stack<Card> deck = new Stack<Card>();
+			//infer what the next state will be from the provided action
+			State nextState = currentState.nextState(availableActions[i], deck);
+			//create a childNode to append to the tree
+			Node childNode = new Node(nextState, rootNode, availableActions[i]);
+			rootNode.addChild(childNode);
 		}
+		
+		//initialise currentNode to be the root node
+		Node currentNode = rootNode;
+		
+		//for some predefined unit of time
+		for(int t = 0; t < 100; t++)
+		{
+			//if the current node is NOT a leaf node (e.g. is currentNode.children is NOT empty)
+			if(!currentNode.getChildren().isEmpty())
+			{
+				//the new current node is the child node that maximises UCB1
 				
-		return null;
+				List<Node> childrenList = currentNode.getChildren();
+				
+				double maxUCB1 = 0;
+				Node maximisingChild = childrenList.get(0);
+				
+				for(Node n : childrenList)
+				{
+					double UCB1Val = UCB1(n.getParent().getVisits(), n); 
+					if(UCB1Val > maxUCB1)
+					{
+						maxUCB1 = UCB1Val;
+						maximisingChild = n;
+					}
+				}
+				
+				currentNode = maximisingChild;
+
+			}
+			//else if the current node IS a leaf node
+			else
+			{
+				//if we haven't visited the node before (e.g. if currentNode.noOfVisits == 0)
+				if(currentNode.getVisits() == 0)
+				{
+					//rollout
+					int rolloutVal = rollout(currentNode);
+					
+					//update the currentNodes "stats"
+					currentNode.incrementVisits();
+					currentNode.updateScore(rolloutVal);
+					
+					//backpropagate - all the way up the tree!
+					Node traversingNode = currentNode;
+					while(traversingNode.getParent() != null)
+					{
+						traversingNode = traversingNode.getParent();
+						traversingNode.incrementVisits();
+						traversingNode.updateScore(rolloutVal);
+					}
+					
+				}
+				//else if we HAVE visited the node before (e.g. if currentNode.noOfVisits > 0)
+				else
+				{
+					//availableActions() - find all the available actions
+					//PLAYER INDEX - ISSUE?? ----------------------------
+					//What happens when you reach the end of the game...
+					Action[] possibleActions = availableActions(currentNode.getState(),currentNode.getState().getNextPlayer());
+					//---------------------------------------------------
+					
+					//add all these available actions to the tree
+					for(int i = 0; i < possibleActions.length; i++)
+					{
+						//??
+						Stack<Card> deck = new Stack<Card>();
+						//infer what the next state will be from the provided action
+						State nextState = currentNode.getState().nextState(availableActions[i], deck);
+						//create a childNode to append to the tree
+						Node childNode = new Node(nextState, currentNode, availableActions[i]);
+						currentNode.addChild(childNode);
+					}
+						
+					//currentNode = first new child node
+					currentNode = currentNode.getChildren().get(0);
+					
+					//rollout
+					int rolloutVal = rollout(currentNode);
+		
+					//backtrack
+					Node traversingNode = currentNode;
+					while(traversingNode.getParent() != null)
+					{
+						traversingNode = traversingNode.getParent();
+						traversingNode.incrementVisits();
+						traversingNode.updateScore(rolloutVal);
+					}
+					
+				}
+			}	
+		}
+		
+		//do a simple greedy search for child which has the greatest value e.g. whose .getScore() is greatest
+		int maxScore = 0;
+		Node optimalNode = rootNode.getChildren().get(0);
+		for(Node n : rootNode.getChildren())
+		{
+			if(n.getScore() > maxScore)
+			{
+				optimalNode = n;
+			}
+		}
+		
+		return optimalNode.getAction();
 	}
 	
-	/**
-	 * @param tree
-	 * @param parentNode
-	 * @return
-	 */
-	public Action recursiveMCTS(HashMap<Node, Node> tree, Node parentNode)
-	{
-		
-		return null;
-	}
 	
 	/**
 	 * From a given state and player index - determines a list of playable/best actions to take
@@ -242,10 +329,11 @@ public class DaringAgent implements Agent{
 	 * @param currentState - the initial state which we start our exploration from
 	 * @return - returns the value gained from the randomly generated actions over the initial state
 	 */
-	public int rollout(State currentState)
+	public int rollout(Node currentNoded)
 	{
 		return 0;
 	}
+	
 	
 	/**
 	 * Implements the UCB1 formula
@@ -265,7 +353,6 @@ public class DaringAgent implements Agent{
 		return V + (c*(Math.sqrt(Math.log(N)/currentNode.getVisits())));
 	}
 	
-	
 	/**
 	 * A class to represent the nodes of the MCTS tree  
 	 * @author Ryan
@@ -273,18 +360,27 @@ public class DaringAgent implements Agent{
 	public class Node {
 		
 		//score of the current state of the game
-		int score;
+		private int score;
 		//number of visits this node has recieved
-		int noOfVisits;
+		private int noOfVisits;
 		//the actual state this node in the tree represents
-		State state;
+		private State state;
+		//the parent of the node
+		private Node parent;
+		//the children of this node
+		private List<Node> children = new ArrayList<Node>();
+		//the action that the parent node experienced to translate it into this current node
+		Action parentAction;
 		
 		//constructor - initialises all the instance variables
-		public Node(State state)
+		public Node(State state, Node parent, Action parentAction)
 		{
 			this.state = state;
 			this.score = 0;
 			this.noOfVisits = 0;
+			this.children = null;
+			this.parent = parent;
+			this.parentAction = parentAction;
 		}
 		
 		//returns the score of the node
@@ -305,16 +401,40 @@ public class DaringAgent implements Agent{
 			return state;
 		}
 		
+		//returns the list containing all the children of the current node
+		public List<Node> getChildren()
+		{
+			return children;
+		}
+		
+		//returns the action which transformed the parent node to the current node
+		public Action getAction()
+		{
+			return parentAction;
+		}
+		
+		//returns the parent of the current ndoe
+		public Node getParent()
+		{
+			return parent;
+		}
+		
 		//updates the score of the node/state
 		public void updateScore(int newScore)
 		{
-			score = newScore;
+			score = score + newScore;
 		}
 		
 		//updates the number of visits this node has recieved
 		public void incrementVisits()
 		{
 			noOfVisits++;
+		}
+		
+		//add a child to the node
+		public void addChild(Node child)
+		{
+			children.add(child);
 		}
 		
 	}
