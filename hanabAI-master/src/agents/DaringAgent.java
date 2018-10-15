@@ -61,7 +61,7 @@ public class DaringAgent implements Agent{
 		thisUtility(s, stackInfo);
 		otherUtility(s, stackInfo);
 		
-		//if no hints have been given - give a hint to a player
+		//if no hints have been given to this agent - give a hint to a player
 		if(playersHints.get(index).isEmpty())
 		{
 			try {
@@ -478,10 +478,10 @@ public class DaringAgent implements Agent{
 				
 				if(utility[j] == 5)
 				{
-					if(Math.random() < 0.5) {
+					if(Math.random() < 0.5 && !inMemory(i, 0, hand[j])) {
 						return new Action(index, toString(), ActionType.HINT_COLOUR, i, sameColour(hand[j].getColour(),hand), hand[j].getColour());
 					}
-					else {
+					else if (Math.random() >= 5 && !inMemory(i, 1, hand[j])){
 						return new Action(index, toString(), ActionType.HINT_VALUE, i, sameValue(hand[j].getValue(), hand), hand[j].getValue());
 					}
 				}
@@ -489,10 +489,18 @@ public class DaringAgent implements Agent{
 			
 		}
 		
-		return null;
+		//do a random hint
+		return new Action(index, toString(), ActionType.HINT_VALUE, 2, sameValue(currentState.getHand(2)[1].getValue(), currentState.getHand(2)), currentState.getHand(2)[1].getValue());
 	}
 
-
+	/**
+	 * @return - true if the hint has been given (i.e. is in memory) or false if the hint has not been given
+	 */
+	public boolean inMemory(int receiver, int colOrVal, Card thiscard)
+	{
+		return playersHints.get(receiver).contains(hint2string(receiver,colOrVal,thiscard));
+	}
+	
 	/**
 	 * Implements the Monte Carlo Tree Search
 	 * @param currentState - current state of the game
@@ -503,7 +511,7 @@ public class DaringAgent implements Agent{
 	{		
 		//create the root node of the tree
 		Node rootNode = new Node(currentState, null, null);
-		
+				
 		//add children to rootNode - availableActions()
 		Action[] availableActions = availableActions(currentState, currentState.getNextPlayer());
 		for(int i = 0; i < availableActions.length; i++)
@@ -515,14 +523,14 @@ public class DaringAgent implements Agent{
 			Node childNode = new Node(nextState, rootNode, availableActions[i]);
 			rootNode.addChild(childNode);
 		}
-		
+				
 		//initialise currentNode to be the root node
 		Node currentNode = rootNode;
 		int StartingPlayer = currentNode.getState().getNextPlayer();
 		
 		//for some predefined unit of time
 		for(int t = 0; t < 100; t++)
-		{
+		{			
 			if(currentNode.getState().getNextPlayer() == StartingPlayer)
 			{
 				break;
@@ -631,7 +639,6 @@ public class DaringAgent implements Agent{
 	 */
 	public Stack<Card> cardsNotDrawn(State s)
 	{
-		//Stack<Card> deck = Card.shuffledDeck();
 		Stack<Card> deck = new Stack<Card>();
 		return deck;
 	}
@@ -641,12 +648,69 @@ public class DaringAgent implements Agent{
 	 * @param currentState - current state of the game the player is facing
 	 * @param playerIndex - index of the player
 	 * @return - a list of actions which the current player can play
+	 * @throws IllegalActionException 
 	 */
-	public Action[] availableActions(State currentState, int playerIndex)
+	public Action[] availableActions(State currentState, int playerIndex) throws IllegalActionException
 	{
-		//if the current player is THIS agent
+		//WHAT HAPPENS IF THERE ARE NO POSSIBLE ACTIONS?
 		
-		return null;
+		//get the agents name
+		String name = currentState.getName(playerIndex);
+		
+		//update the utilities of every agent
+		Map<String, Integer> stackInfo = stacksInfo(currentState);
+		thisUtility(currentState, stackInfo);
+		otherUtility(currentState, stackInfo);
+		
+		//get the utility array for the current player
+		int[] utilities = playersUtilities[playerIndex];
+		ArrayList<Action> possibleActions = new ArrayList<Action>();
+		
+		//for every card in the current players hand
+		for(int i = 0; i < utilities.length;i++)
+		{
+			Card currentCard = currentState.getHand(playerIndex)[i];
+			
+			if(utilities[i] == 5)
+			{
+				possibleActions.add(new Action(playerIndex, name, ActionType.PLAY, i));
+			}
+			
+			if(utilities[i] == 1)
+			{
+				possibleActions.add(new Action(playerIndex, name, ActionType.PLAY, i));
+			}
+			
+		}
+		
+		//for every other player - if they have a 5 or 1 - give a hint
+		for(int j = 0; j < playersUtilities.length; j++)
+		{
+			if(j == playerIndex) {continue;}
+			
+			int[] otherPlayerUtilities = playersUtilities[j];
+			
+			for(int k = 0; k < otherPlayerUtilities.length; k++)
+			{
+				Card currentCard = currentState.getHand(j)[k];
+				
+				if(otherPlayerUtilities[k] == 5 || otherPlayerUtilities[k] == 1)
+				{
+					if(Math.random() < 0.5)
+					{
+						possibleActions.add(new Action(playerIndex, name, ActionType.HINT_COLOUR, j, sameColour(currentCard.getColour(), currentState.getHand(j)), currentCard.getColour()));
+					}
+					else
+					{
+						possibleActions.add(new Action(playerIndex, name, ActionType.HINT_VALUE, j, sameValue(currentCard.getValue(), currentState.getHand(j)), currentCard.getValue()));
+					}
+					
+				}
+			}
+			
+		}
+		
+		return possibleActions.toArray(new Action[possibleActions.size()]);
 	}
 	
 	
