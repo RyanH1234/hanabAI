@@ -302,6 +302,15 @@ public class DaringAgent implements Agent{
 		return optimalNode.getAction();
 	}
 	
+	/**
+	 * Returns a deck of cards that haven't been drawn yet
+	 * @param s - current state of the game
+	 *  @return - returns a stack containing all the cards that haven't been drawn yet
+	 */
+	public Stack<Card> cardsNotDrawn(State s)
+	{
+		return null;
+	}
 	
 	/**
 	 * From a given state and player index - determines a list of playable/best actions to take
