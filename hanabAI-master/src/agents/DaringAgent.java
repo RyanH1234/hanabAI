@@ -509,6 +509,14 @@ public class DaringAgent implements Agent{
 	 */
 	public Action MCTS(State currentState) throws IllegalActionException
 	{		
+		//local copy of the playersHints array
+		ArrayList<HashSet<String>> localPlayersHints = new ArrayList<HashSet<String>>();
+		for(HashSet<String> h : playersHints)
+		{
+			localPlayersHints.add(h);
+		}
+		
+		
 		//create the root node of the tree
 		Node rootNode = new Node(currentState, null, null);
 				
@@ -516,9 +524,24 @@ public class DaringAgent implements Agent{
 		Action[] availableActions = availableActions(currentState, currentState.getNextPlayer());
 		for(int i = 0; i < availableActions.length; i++)
 		{
-			Stack<Card> deck = cardsNotDrawn(currentState);
+			if(availableActions[i].getType() == ActionType.HINT_VALUE)
+			{
+				String hint = hint2string(availableActions[i].getHintReceiver(),1, availableActions[i].getValue(), availableActions[i].getHintedCards());
+				if(localPlayersHints.contains(hint))
+				{
+					continue;
+				}
+			}else if(availableActions[i].getType() == ActionType.HINT_COLOUR){
+				String hint = hint2string(availableActions[i].getHintReceiver(),0, availableActions[i].getColour(), availableActions[i].getHintedCards());
+				if(localPlayersHints.contains(hint))
+				{
+					continue;
+				}
+			}
+			
+			Stack<Card> deck = cardsNotDrawn(currentState);		
 			//infer what the next state will be from the provided action
-			State nextState = currentState.nextState(availableActions[i], deck);
+			State nextState = currentState.nextState(availableActions[i], deck);			
 			//create a childNode to append to the tree
 			Node childNode = new Node(nextState, rootNode, availableActions[i]);
 			rootNode.addChild(childNode);
@@ -581,6 +604,10 @@ public class DaringAgent implements Agent{
 						traversingNode.updateScore(rolloutVal);
 					}
 					
+					//reset the hints given...
+					localPlayersHints = playersHints;
+					
+					
 				}
 				//else if we HAVE visited the node before (e.g. if currentNode.noOfVisits > 0)
 				else
@@ -591,6 +618,23 @@ public class DaringAgent implements Agent{
 					//add all these available actions to the tree
 					for(int i = 0; i < possibleActions.length; i++)
 					{
+						
+						if(availableActions[i].getType() == ActionType.HINT_VALUE)
+						{
+							String hint = hint2string(availableActions[i].getHintReceiver(),1, availableActions[i].getValue(), availableActions[i].getHintedCards());
+							if(localPlayersHints.contains(hint))
+							{
+								continue;
+							}
+						}else if(availableActions[i].getType() == ActionType.HINT_COLOUR){
+							String hint = hint2string(availableActions[i].getHintReceiver(),0, availableActions[i].getColour(), availableActions[i].getHintedCards());
+							if(localPlayersHints.contains(hint))
+							{
+								continue;
+							}
+						}
+						
+						
 						Stack<Card> deck = cardsNotDrawn(currentNode.getState());
 						//infer what the next state will be from the provided action
 						State nextState = currentNode.getState().nextState(availableActions[i], deck);
@@ -651,9 +695,7 @@ public class DaringAgent implements Agent{
 	 * @throws IllegalActionException 
 	 */
 	public Action[] availableActions(State currentState, int playerIndex) throws IllegalActionException
-	{
-		//WHAT HAPPENS IF THERE ARE NO POSSIBLE ACTIONS?
-		
+	{	
 		//get the agents name
 		String name = currentState.getName(playerIndex);
 		
