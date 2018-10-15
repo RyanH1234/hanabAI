@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import hanabAI.Action;
@@ -30,11 +31,63 @@ public class DaringAgent implements Agent{
 	private int numPlayers;
 	//records the number of cards we're playing with
 	private int numCards;
-	//records the current player's utility
-	public int[] utility;
-	//hashset memory used to store all previously given hints
-	private HashSet<String> memory;
-
+	//a 2D array which contains the utilities of each card for each player
+	private int[][] playersUtilities;
+	//an ArrayList of HashSets which keeps track of the hints each player has recieved
+	private ArrayList<HashSet<String>> playersHints;
+	
+	/**
+	 * String representation of the Agent's name
+	 */
+	public String toString()
+	{
+		return "DaringAgent";
+	}
+		
+	@Override
+	public Action doAction(State s) {
+		
+		//initialise the state of the game
+		if(firstAction)
+		{
+			init(s);
+		}
+		
+		//update hints
+		getHints(s);
+				
+		//get utilities for each players stack of cards
+		Map<String, Integer> stackInfo = stacksInfo(s);
+		thisUtility(s, stackInfo);
+		otherUtility(s, stackInfo);
+		
+		//if no hints have been given - give a hint to a player
+		if(playersHints.get(index).isEmpty())
+		{
+			try {
+				return bestHint(s);
+			} catch (IllegalActionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			//return the best action based on the MCTS...
+			try 
+			{
+				return MCTS(s);
+			} 
+			catch (IllegalActionException e) 
+			{
+				e.printStackTrace();
+			}
+		}
+		
+		return null;
+	}
+	
+	
 	/**
 	 * initialises all variables in the first round of the game
 	 * @param s current state of the game
@@ -43,26 +96,28 @@ public class DaringAgent implements Agent{
 	{
 	    numPlayers = s.getPlayers().length;
 	    
-	    memory = new HashSet<String>();
-	    
 	    if(numPlayers==5){
 	      colours = new Colour[4];
 	      values = new int[4];
-	      utility = new int[4];
 	      numCards = 4;
-	      
+	      playersHints = new ArrayList<HashSet<String>>();
+	      playersUtilities = new int[5][4]; 
 	    }
 	    else{
 	      colours = new Colour[5];
 	      values = new int[5];
-	      utility = new int[5];
 	      numCards = 5;
+	      playersUtilities = new int[5][5];
 	    }
 	    
 	    index = s.getNextPlayer();
 	    firstAction = false;
 	    
-	    memory.clear();
+	    for(int i = 0; i < playersHints.size(); i++)
+	    {
+	    	HashSet<String> memory = playersHints.get(i);
+	    	memory.clear();
+	    }
 	}
 	
 	/**
@@ -81,34 +136,21 @@ public class DaringAgent implements Agent{
 	        	
 	          Action a = t.getPreviousAction();
 	          
-	          //~add previous player's hints to memory too
-	          if(a.getType()==ActionType.HINT_COLOUR && a.getHintReceiver()!=index)
-	          {
-	        	  	memory.add(hint2string(a.getHintReceiver(),0,a.getColour(),a.getHintedCards()));
+	          //if a hint about the colour of a card is given
+	          //save it to the appropriate HashSet for the relevant player
+	          if(a.getType()==ActionType.HINT_COLOUR){
+	        	  int playerIndex = a.getHintReceiver();
+	        	  HashSet<String> memory = playersHints.get(playerIndex);
+	        	  memory.add(hint2string(a.getHintReceiver(),0,a.getColour(),a.getHintedCards()));
 	          }
-	          if(a.getType()==ActionType.HINT_VALUE && a.getHintReceiver()!=index)
-	          {
-	        	  	memory.add(hint2string(a.getHintReceiver(),1,a.getValue(),a.getHintedCards()));
+	          //if a hint about the value of a card is given
+	          //save it to the appropriate HashSet for the relevant player
+	          else if(a.getType() == ActionType.HINT_VALUE){
+	        	  int playerIndex = a.getHintReceiver();
+	        	  HashSet<String> memory = playersHints.get(playerIndex);
+	        	  memory.add(hint2string(a.getHintReceiver(),1,a.getValue(),a.getHintedCards()));
 	          }
-	          
-	          //if any of these actions are of type "hint"
-	          if((a.getType()==ActionType.HINT_COLOUR || a.getType() == ActionType.HINT_VALUE) && a.getHintReceiver()==index){
-	            
-	        	//save an array of booleans indicating the cards that are subject of the hint
-	            boolean[] hints = t.getPreviousAction().getHintedCards();
-	            
-	            //save the hints into a local array - either colours[] or values[]
-	            for(int j = 0; j<hints.length; j++){
-	              if(hints[j]){
-	                if(a.getType()==ActionType.HINT_COLOUR) 
-	                  colours[j] = a.getColour();
-	                else
-	                  values[j] = a.getValue();  
-	              }
-	            }
-	            
-	          } 
-	          
+	          	          
 	          //go to the previous state
 	          t = t.getPreviousState();
 	        }
@@ -140,37 +182,316 @@ public class DaringAgent implements Agent{
 	}
 
 	/**
-	 * String representation of the Agent's name
+	 * Creates a structure which contains information on the current fireworks set
+	 * "EMPTYSTACKS" -> number of empty stacks
+	 * "MINNUMBER" -> the minimum card value played on the stack
+	 * "BLUE", "GREEN", "RED", "WHITE", "YELLOW" -> 0 OR the maximum card placed in that pile
+	 * @return a hashmap with <key, value> pairs which reflect important information on the current fireworks set
 	 */
-	public String toString()
+	public Map<String, Integer> stacksInfo(State s)
 	{
-		return "DaringAgent";
-	}
+		Map<String, Integer> info = new HashMap<String, Integer>();
 		
-	@Override
-	public Action doAction(State s) {
+		//number of empty stacks
+		int numEmptyStacks = 0;
+				
+		//variables which record the size of each stack
+		int blueSize = 0;
+		int GreenSize = 0;
+		int redSize = 0;
+		int whiteSize = 0;
+		int yellowSize = 0;
 		
-		//initialise the state of the game
-		if(firstAction)
+		//initialise variables for each of the stacks 
+		Stack<Card> blueStack = s.getFirework(Colour.BLUE);
+		Stack<Card> greenStack = s.getFirework(Colour.GREEN);
+		Stack<Card> redStack = s.getFirework(Colour.RED);
+		Stack<Card> whiteStack = s.getFirework(Colour.WHITE);
+		Stack<Card> yellowStack = s.getFirework(Colour.YELLOW);
+		
+		//minimum valued card out of ALL the firework stacks
+		int minimumCardValue = -1;
+		
+		//BLUE
+		if(blueStack.isEmpty())
 		{
-			init(s);
+			numEmptyStacks++;
+			info.put("BLUE", 0);
+			minimumCardValue = 0;
+		}
+		else
+		{
+			int blueValue = blueStack.pop().getValue();
+			info.put("BLUE",blueValue);
+			if(blueValue <= minimumCardValue || minimumCardValue == -1) minimumCardValue = blueValue;
+			
 		}
 		
-		//update hints
-		getHints(s);
+		//GREEN
+		if(greenStack.isEmpty())
+		{
+			numEmptyStacks++;
+			info.put("GREEN", 0);
+			minimumCardValue = 0;
+		}
+		else
+		{
+			int greenValue = greenStack.pop().getValue();
+			info.put("GREEN", greenValue);
+			if(greenValue <= minimumCardValue || minimumCardValue == -1) minimumCardValue = greenValue;
+			
+		}
 		
-		//return the best action based on the MCTS...
-		try 
+		//RED
+		if(redStack.isEmpty())
 		{
-			return MCTS(s);
-		} 
-		catch (IllegalActionException e) 
+			numEmptyStacks++;
+			info.put("RED", 0);
+			minimumCardValue = 0;
+		}
+		else
 		{
-			e.printStackTrace();
+			int redValue = redStack.pop().getValue();
+			info.put("RED",redValue);
+			if(redValue <= minimumCardValue || minimumCardValue == -1) minimumCardValue = redValue;
+		}
+		
+		//WHITE
+		if(whiteStack.isEmpty())
+		{
+			numEmptyStacks++;
+			info.put("WHITE", 0);
+			minimumCardValue = 0;
+		}
+		else
+		{
+			int whiteValue = whiteStack.pop().getValue();
+			info.put("WHITE",whiteValue);
+			if(whiteValue <= minimumCardValue || minimumCardValue == -1) minimumCardValue = whiteValue;
+		}
+		
+		//YELLOW
+		if(yellowStack.isEmpty())
+		{
+			numEmptyStacks++;
+			info.put("YELLOW", 0);
+			minimumCardValue = 0;
+		}
+		else
+		{
+			int yellowValue = yellowStack.pop().getValue();
+			info.put("YELLOW",yellowValue);
+			if(yellowValue <= minimumCardValue) minimumCardValue = yellowValue;
+		}
+		
+		info.put("EMPTYSTACKS", numEmptyStacks);
+		info.put("MINNUMBER", minimumCardValue);
+		
+		return info;
+	}
+	
+	/**
+	 * Updates the utility of THIS agent
+	 * 5 -> play this card
+	 * 4 -> known card
+	 * 3 -> partially known card
+	 * 2 -> default unkown card
+	 * 1 -> dead card, prioritise for discard
+	 * @param currentState - currentState of the game
+	 */
+	public void thisUtility(State currentState, Map<String, Integer> struct)
+	{
+		int[] cardUtilities = new int[numCards];
+		
+		for(int i = 0; i < numCards; i++)
+		{
+			//default value - set to two
+			//initialise each card to a value of 2
+			cardUtilities[i] = 2;			
+		
+			//if the card is "null" ignore it
+			if(colours[i] == null)
+			{
+				cardUtilities[i] = 1;
+			}
+			
+			//if we can identify both its colour and value
+			if(colours[i] != null && values[i] != 0)
+			{
+				cardUtilities[i] = 4;				
+			} 
+			//if we can identify either its colour or value
+			else if(colours[i] != null || values[i] != 0)
+			{
+				cardUtilities[i] = 3;
+			}
+			
+			//if we know we have a one and the number of empty stacks is 5
+			if(values[i] == 1 && struct.get("EMPTYSTACKS") == 5)
+			{
+				cardUtilities[i] = 5;
+			}
+			
+			//if we have a number which is smaller than the minimum number on ALL the decks - discard it
+			if(values[i] <= struct.get("MINNUMBER"))
+			{
+				cardUtilities[i] = 1;
+			}				
+		}
+		
+		playersUtilities[index] = cardUtilities;
+		
+	}
+	
+	/**
+	 * Updates the utility of every OTHER agent in the game
+	 * 5 -> play this card
+	 * 4 -> known card
+	 * 3 -> partially known card
+	 * 2 -> default unkown card
+	 * 1 -> dead card, prioritise for discard
+	 * @param currentState - currentState of the game
+	 */
+	public void otherUtility(State currentState, Map<String, Integer> struct)
+	{
+		for(int i = 0; i < numPlayers; i++)
+		{
+			if(i == index) {continue;}
+	
+			int[] cardUtilities = new int[numCards];
+			
+			//get this other players hand
+			Card[] playersHand = currentState.getHand(i);
+			
+			//for each card in the other players hand
+			for(int j = 0; j < playersHand.length; j++)
+			{
+				//initialise all utilities to 1
+				cardUtilities[j] = 1;
+				
+				//if equal to null - skip it
+				if(playersHand[j] == null)
+				{
+					continue;
+				}
+				
+				//if a card can be played - assign a utility of 5
+				if(playable(currentState, playersHand[j] ) == 1)
+				{
+					cardUtilities[j] = 5;
+				}
+			}
+			
+			playersUtilities[i] = cardUtilities;
+			
+		}
+	}
+	
+	/**
+	 * a card is only playable if the top card on it stack is 1 less than the card
+	 * @param s - current state of the came
+	 * @param c - card that needs to be identified as playable or not
+	 * @return - 1 if the card is playable, 0 if the card is NOT playable
+	 */
+	public int playable(State s, Card c)
+	{
+		if(s.getFirework(c.getColour()).isEmpty()) {
+			if(c.getValue() == 1){
+				return 1;
+			}
+			else{
+				return 0;
+			}
+		}
+		else{
+			Stack<Card> fireworksStack = s.getFirework(c.getColour());
+			if(fireworksStack.peek().getValue() == (c.getValue()-1)){
+				return 1;
+			}
+			else{
+				return 0;
+			}
+		}		
+	}
+	
+	/**
+	 * From a hand returns a boolean array of the cards which have the colour 'c'
+	 * @param c - the colour to be found in hand
+	 * @param hand - the hand to check for the above colour
+	 */
+	public boolean[] sameColour(Colour c, Card[] hand)
+	{
+		boolean[] bool = new boolean[hand.length];
+		for(int i = 0; i < hand.length; i++)
+		{
+			if(hand[i].getColour().toString().equals(c))
+			{
+				bool[i] = true;
+			}
+			else
+			{
+				bool[i] = false;
+			}
+		}
+		return bool;
+	}
+	
+	/**
+	 * From a hand returns a boolean array of the cards which have the same value 'val'
+	 * @return
+	 */
+	public boolean[] sameValue(int val, Card[] hand)
+	{
+		boolean[] bool = new boolean[hand.length];
+		for(int i = 0; i < hand.length; i++)
+		{
+			if(hand[i].getValue() == val)
+			{
+				bool[i] = true;
+			}
+			else
+			{
+				bool[i] = false;
+			}
+		}
+		return bool;
+	}
+
+	/**
+	 *  Determines the best hint to give based on OTHER player's hands
+	 *  Strictly from this player's P.O.V
+	 *  @param currentState - current state of the game the player is facing
+	 *  @return - the best action to take from a "greedy" perspective
+	 * @throws IllegalActionException 
+	 */
+	public Action bestHint(State currentState) throws IllegalActionException
+	{
+		for(int i = 0; i < numPlayers; i++)
+		{
+			if(i == index) {continue;}
+			
+			int[] utility = playersUtilities[i];
+			
+			for(int j = 0; j < utility.length; j++)
+			{
+				Card[] hand = currentState.getHand(i);
+				
+				if(utility[j] == 5)
+				{
+					if(Math.random() < 0.5) {
+						return new Action(index, toString(), ActionType.HINT_COLOUR, i, sameColour(hand[j].getColour(),hand), hand[j].getColour());
+					}
+					else {
+						return new Action(index, toString(), ActionType.HINT_VALUE, i, sameValue(hand[j].getValue(), hand), hand[j].getValue());
+					}
+				}
+			}
+			
 		}
 		
 		return null;
 	}
+
 
 	/**
 	 * Implements the Monte Carlo Tree Search
@@ -184,11 +505,10 @@ public class DaringAgent implements Agent{
 		Node rootNode = new Node(currentState, null, null);
 		
 		//add children to rootNode - availableActions()
-		Action[] availableActions = availableActions(currentState, index);
+		Action[] availableActions = availableActions(currentState, currentState.getNextPlayer());
 		for(int i = 0; i < availableActions.length; i++)
 		{
-			//??
-			Stack<Card> deck = new Stack<Card>();
+			Stack<Card> deck = cardsNotDrawn(currentState);
 			//infer what the next state will be from the provided action
 			State nextState = currentState.nextState(availableActions[i], deck);
 			//create a childNode to append to the tree
@@ -198,10 +518,16 @@ public class DaringAgent implements Agent{
 		
 		//initialise currentNode to be the root node
 		Node currentNode = rootNode;
+		int StartingPlayer = currentNode.getState().getNextPlayer();
 		
 		//for some predefined unit of time
 		for(int t = 0; t < 100; t++)
 		{
+			if(currentNode.getState().getNextPlayer() == StartingPlayer)
+			{
+				break;
+			}
+			
 			//if the current node is NOT a leaf node (e.g. is currentNode.children is NOT empty)
 			if(!currentNode.getChildren().isEmpty())
 			{
@@ -252,16 +578,12 @@ public class DaringAgent implements Agent{
 				else
 				{
 					//availableActions() - find all the available actions
-					//PLAYER INDEX - ISSUE?? ----------------------------
-					//What happens when you reach the end of the game...
 					Action[] possibleActions = availableActions(currentNode.getState(),currentNode.getState().getNextPlayer());
-					//---------------------------------------------------
 					
 					//add all these available actions to the tree
 					for(int i = 0; i < possibleActions.length; i++)
 					{
-						//??
-						Stack<Card> deck = new Stack<Card>();
+						Stack<Card> deck = cardsNotDrawn(currentNode.getState());
 						//infer what the next state will be from the provided action
 						State nextState = currentNode.getState().nextState(availableActions[i], deck);
 						//create a childNode to append to the tree
@@ -309,7 +631,9 @@ public class DaringAgent implements Agent{
 	 */
 	public Stack<Card> cardsNotDrawn(State s)
 	{
-		return null;
+		//Stack<Card> deck = Card.shuffledDeck();
+		Stack<Card> deck = new Stack<Card>();
+		return deck;
 	}
 	
 	/**
@@ -321,17 +645,11 @@ public class DaringAgent implements Agent{
 	public Action[] availableActions(State currentState, int playerIndex)
 	{
 		//if the current player is THIS agent
-		if(playerIndex == index)
-		{
-			
-		}
-		else
-		{
-			
-		}
 		
 		return null;
 	}
+	
+	
 	
 	/**
 	 * From a given state - randomly choose different actions to get to some end goal value

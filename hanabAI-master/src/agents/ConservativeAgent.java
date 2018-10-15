@@ -235,6 +235,16 @@ public class ConservativeAgent implements Agent{
 	    numPlayers = s.getPlayers().length;
 	    
 	    memory = new HashSet<String>();
+	    /**
+	    if(numPlayers>3){
+	        colours = new Colour[4];
+	        values = new int[4];
+	      }
+	      else{
+	        colours = new Colour[5];
+	        values = new int[5];
+	      }
+	      **/
 	    
 	    if(numPlayers==5){
 	      colours = new Colour[4];
