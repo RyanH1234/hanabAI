@@ -62,12 +62,15 @@ public class DaringAgent implements Agent{
 		otherUtility(s, stackInfo);
 		
 		//if no hints have been given to this agent - give a hint to a player
-		if(playersHints.get(index).isEmpty())
+		if(playersHints.isEmpty())
 		{
-			try {
+			try 
+			{
 				return bestHint(s);
-			} catch (IllegalActionException e) {
-				// TODO Auto-generated catch block
+			} 
+			catch (IllegalActionException e) 
+			{
+				System.out.println("GREEDY SEARCH HAS FAILED");
 				e.printStackTrace();
 			}
 		}
@@ -80,6 +83,7 @@ public class DaringAgent implements Agent{
 			} 
 			catch (IllegalActionException e) 
 			{
+				System.out.println("MONTE CARLO TREE SEARCH HAS FAILED");
 				e.printStackTrace();
 			}
 		}
@@ -90,24 +94,24 @@ public class DaringAgent implements Agent{
 	
 	/**
 	 * initialises all variables in the first round of the game
-	 * @param s current state of the game
+	 * @param s - current state of the game
 	 */
 	public void init(State s)
 	{
 	    numPlayers = s.getPlayers().length;
+	    playersHints = new ArrayList<HashSet<String>>();
 	    
 	    if(numPlayers==5){
 	      colours = new Colour[4];
 	      values = new int[4];
 	      numCards = 4;
-	      playersHints = new ArrayList<HashSet<String>>();
 	      playersUtilities = new int[5][4]; 
 	    }
 	    else{
 	      colours = new Colour[5];
 	      values = new int[5];
 	      numCards = 5;
-	      playersUtilities = new int[5][5];
+	      playersUtilities = new int[numPlayers][5];
 	    }
 	    
 	    index = s.getNextPlayer();
@@ -121,9 +125,8 @@ public class DaringAgent implements Agent{
 	}
 	
 	/**
-	 * updates "colours" and "values" from the information provided by the state of the game
-	 * ACKNOWLEDGEMENT: BasicAgent.java
-	 * @param s current state of the game
+	 * updates the hints given throughout the game
+	 * @param s - current state of the game
 	 */
 	public void getHints(State s)
 	{
@@ -490,7 +493,11 @@ public class DaringAgent implements Agent{
 		}
 		
 		//do a random hint
-		return new Action(index, toString(), ActionType.HINT_VALUE, 2, sameValue(currentState.getHand(2)[1].getValue(), currentState.getHand(2)), currentState.getHand(2)[1].getValue());
+		
+		int randomPlayer = (int) (Math.random() * numPlayers);
+		int randomCard = (int) (Math.random() * numCards);
+		
+		return new Action(index, toString(), ActionType.HINT_VALUE, randomPlayer, sameValue(currentState.getHand(randomPlayer)[randomCard].getValue(), currentState.getHand(randomPlayer)), currentState.getHand(randomPlayer)[randomCard].getValue());
 	}
 
 	/**
@@ -515,13 +522,13 @@ public class DaringAgent implements Agent{
 		{
 			localPlayersHints.add(h);
 		}
-		
-		
+				
 		//create the root node of the tree
 		Node rootNode = new Node(currentState, null, null);
 				
 		//add children to rootNode - availableActions()
 		Action[] availableActions = availableActions(currentState, currentState.getNextPlayer());
+		
 		for(int i = 0; i < availableActions.length; i++)
 		{
 			if(availableActions[i].getType() == ActionType.HINT_VALUE)
@@ -531,7 +538,10 @@ public class DaringAgent implements Agent{
 				{
 					continue;
 				}
-			}else if(availableActions[i].getType() == ActionType.HINT_COLOUR){
+				
+			}
+			else if(availableActions[i].getType() == ActionType.HINT_COLOUR)
+			{
 				String hint = hint2string(availableActions[i].getHintReceiver(),0, availableActions[i].getColour(), availableActions[i].getHintedCards());
 				if(localPlayersHints.contains(hint))
 				{
@@ -563,7 +573,6 @@ public class DaringAgent implements Agent{
 			if(!currentNode.getChildren().isEmpty())
 			{
 				//the new current node is the child node that maximises UCB1
-				
 				List<Node> childrenList = currentNode.getChildren();
 				
 				double maxUCB1 = 0;
@@ -754,18 +763,42 @@ public class DaringAgent implements Agent{
 		
 		return possibleActions.toArray(new Action[possibleActions.size()]);
 	}
-	
-	
-	
+		
 	/**
 	 * From a given state - randomly choose different actions to get to some end goal value
 	 * @param currentState - the initial state which we start our exploration from
 	 * @return - returns the value gained from the randomly generated actions over the initial state
+	 * @throws IllegalActionException 
 	 */
-	public int rollout(Node currentNoded)
+	public int rollout(Node currentNode) throws IllegalActionException
 	{
-		return 0;
+		State currentState = currentNode.getState();
+		
+		Map<String,Integer> initialInfo = stacksInfo(currentState);
+		int initialScore = initialInfo.get("BLUE") + initialInfo.get("GREEN") + initialInfo.get("RED") + initialInfo.get("YELLOW") + initialInfo.get("WHITE");
+		
+		int initialPlayer = currentState.getNextPlayer();
+		while(true) {
+			
+			Action[] possibleActions = availableActions(currentState, currentState.getNextPlayer());
+			
+			int randomAction = (int) (Math.random()*possibleActions.length);
+						
+			currentState = currentState.nextState(possibleActions[randomAction], cardsNotDrawn(currentState));
+			
+			if(initialPlayer == currentState.getNextPlayer())
+			{
+				break;
+			}
+		}
+		
+		Map<String,Integer> presentInfo = stacksInfo(currentState);
+		int presentScore = presentInfo.get("BLUE") + initialInfo.get("GREEN") + initialInfo.get("RED") + initialInfo.get("YELLOW") + initialInfo.get("WHITE");
+		
+		
+		return (presentScore + initialScore);
 	}
+	
 	
 	
 	/**
@@ -785,6 +818,8 @@ public class DaringAgent implements Agent{
 		//UCBI = V + c*sqrt(ln(N)/n)
 		return V + (c*(Math.sqrt(Math.log(N)/currentNode.getVisits())));
 	}
+	
+		
 	
 	/**
 	 * A class to represent the nodes of the MCTS tree  
