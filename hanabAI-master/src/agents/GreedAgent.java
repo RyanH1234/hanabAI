@@ -709,11 +709,7 @@ public class GreedAgent implements Agent{
 	 * @param thiscard  - the card which the hint relates to
 	 * @return a string representation of the hint
 	 */
-	public String hint2string(int receiver, int colOrVal, Card thiscard)
-	{
-		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+thiscard.toString();
-		return memkey;
-	}
+
 	public String hint2string(int receiver, int colOrVal, Colour c, boolean[] hand)
 	{
 		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+c.toString()+Arrays.toString(hand);
@@ -725,14 +721,7 @@ public class GreedAgent implements Agent{
 		return memkey;
 	}
 	
-	/**
-	 * @return - true if the hint has been given (i.e. is in memory) or false if the hint has not been given
-	 */
-	public boolean inMemory(int receiver, int colOrVal, Card thiscard)
-	{
-		return memory.contains(hint2string(receiver,colOrVal,thiscard));
-	}
-	
+
 	
 	/**
 	 * @return returns the string representation of this agent's name 
