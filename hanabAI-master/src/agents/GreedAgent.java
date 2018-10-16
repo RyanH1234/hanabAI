@@ -128,10 +128,12 @@ public class GreedAgent implements Agent{
 			{
 				try 
 				{
-					//safe to assume it's not in memory
+					//NO DON'T ASSUME IT'S NOT IN MEMORY
 					boolean[] h1c = makecolourbool(playersHand, playersHand[test[1]]);
-					memory.add(hint2string(i,0,playersHand[test[1]].getColour(),h1c));
-					return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playersHand[test[1]].getColour());
+					if(!memory.contains(hint2string(i,0,playersHand[test[1]].getColour(),h1c))) {
+						memory.add(hint2string(i,0,playersHand[test[1]].getColour(),h1c));
+						return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playersHand[test[1]].getColour());
+					}
 				} 
 				catch (IllegalActionException e) 
 				{
@@ -142,8 +144,10 @@ public class GreedAgent implements Agent{
 				try 
 				{
 					boolean[] h2c = makevalbool(playersHand, playersHand[test[1]]);
-					memory.add(hint2string(i,1,playersHand[test[1]].getValue(),h2c));
-					return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playersHand[test[1]].getValue());
+					if(!memory.contains(hint2string(i,1,playersHand[test[1]].getValue(),h2c))) {
+						memory.add(hint2string(i,1,playersHand[test[1]].getValue(),h2c));
+						return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playersHand[test[1]].getValue());
+					}
 				} 
 				catch (IllegalActionException e) 
 				{
@@ -244,13 +248,6 @@ public class GreedAgent implements Agent{
 			{
 				Action randoma = randhint(s);
 
-				if(randoma.getType()==ActionType.HINT_COLOUR) 
-				{
-					memory.add(hint2string(randoma.getHintReceiver(),0,randoma.getColour(),randoma.getHintedCards()));
-				}else 
-				{
-					memory.add(hint2string(randoma.getHintReceiver(),1,randoma.getValue(),randoma.getHintedCards()));
-				}
 				return randoma;
 			} 
 			catch (IllegalActionException e) 
@@ -274,6 +271,8 @@ public class GreedAgent implements Agent{
 		
 		try 
 		{
+	        colours[minIndex] = null;
+	        values[minIndex] = 0;
 			return new Action(index, toString(), ActionType.DISCARD,minIndex);
 		} 
 		catch (IllegalActionException e) 
@@ -294,10 +293,6 @@ public class GreedAgent implements Agent{
 	public void init(State s)
 	{
 	    numPlayers = s.getPlayers().length;
-	    
-	    othervalues = new int[numPlayers][numCards];
-	    othercolours = new Colour[numPlayers][numCards];
-
 	    memory = new HashSet<String>();
 	    
 	    if(numPlayers==5){
@@ -313,6 +308,8 @@ public class GreedAgent implements Agent{
 	      utility = new int[5];
 	      numCards = 5;
 	    }
+	    othervalues = new int[numPlayers][numCards];
+	    othercolours = new Colour[numPlayers][numCards];
 	    
 	    index = s.getNextPlayer();
 	    firstAction = false;
@@ -336,9 +333,6 @@ public class GreedAgent implements Agent{
 	        	
 	          Action a = t.getPreviousAction();
 	          
-	          //save an array of booleans indicating the cards that are subject of the hint
-	          boolean[] hints = t.getPreviousAction().getHintedCards();
-	          
 	          //if previous action played/discarded card update other players hints
 	          if((a.getType()==ActionType.PLAY||a.getType()==ActionType.DISCARD) && a.getPlayer()!=index)
 	          {
@@ -350,6 +344,8 @@ public class GreedAgent implements Agent{
 	          //~add previous player's hints to memory too
 	          if(a.getType()==ActionType.HINT_COLOUR && a.getHintReceiver()!=index)
 	          {
+	        	  	//save an array of booleans indicating the cards that are subject of the hint
+		          	boolean[] hints = t.getPreviousAction().getHintedCards();
 	        	  	memory.add(hint2string(a.getHintReceiver(),0,a.getColour(),a.getHintedCards()));
 	        	  	//update playersheads using the below function
 	        	  	//move "hints" initialising to outside of the if statements
@@ -364,6 +360,8 @@ public class GreedAgent implements Agent{
 	          }
 	          if(a.getType()==ActionType.HINT_VALUE && a.getHintReceiver()!=index)
 	          {
+		          //save an array of booleans indicating the cards that are subject of the hint
+		          boolean[] hints = t.getPreviousAction().getHintedCards();
 	        	  	memory.add(hint2string(a.getHintReceiver(),1,a.getValue(),a.getHintedCards()));
 	        	  	for(int j = 0; j<hints.length; j++)
 	        	  	{
@@ -377,7 +375,8 @@ public class GreedAgent implements Agent{
 	          //if any of these actions are of type "hint"
 	          if((a.getType()==ActionType.HINT_COLOUR || a.getType() == ActionType.HINT_VALUE) && a.getHintReceiver()==index){
 	            
-	        	//save an array of booleans indicating the cards that are subject of the hint
+	        	  //save an array of booleans indicating the cards that are subject of the hint
+	        	  boolean[] hints = t.getPreviousAction().getHintedCards();
 	            
 	            //save the hints into a local array - either colours[] or values[]
 	            for(int j = 0; j<hints.length; j++){
@@ -411,13 +410,6 @@ public class GreedAgent implements Agent{
 		
 		//number of empty stacks
 		int numEmptyStacks = 0;
-				
-		//variables which record the size of each stack
-		int blueSize = 0;
-		int GreenSize = 0;
-		int redSize = 0;
-		int whiteSize = 0;
-		int yellowSize = 0;
 		
 		//initialise variables for each of the stacks 
 		Stack<Card> blueStack = s.getFirework(Colour.BLUE);
@@ -796,6 +788,7 @@ public class GreedAgent implements Agent{
 		Card[] realhand = s.getHand(playerno);
 		for(int i = 0; i < numCards;i++)
 		{
+			if(realhand[i]==null) {continue;}
 			//If the other player needs only one hint
 			if(othercolours[playerno][i] != null && othervalues[playerno][i] == 0)
 			{
@@ -835,7 +828,7 @@ public class GreedAgent implements Agent{
         Card[] hand = s.getHand(hintee);
         for(int j = 0; j<hand.length; j++){
           Card c = hand[j];
-          if(c!=null && c.getValue()==playable(s,c)){
+          if(c!=null){
             //flip coin
             if(Math.random()>0.5){//give colour hint
               boolean[] col = new boolean[hand.length];

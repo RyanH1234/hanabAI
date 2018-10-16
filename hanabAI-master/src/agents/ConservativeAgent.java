@@ -213,6 +213,8 @@ public class ConservativeAgent implements Agent{
 		
 		try 
 		{
+	        colours[minIndex] = null;
+	        values[minIndex] = 0;
 			return new Action(index, toString(), ActionType.DISCARD,minIndex);
 		} 
 		catch (IllegalActionException e) 
