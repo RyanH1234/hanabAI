@@ -58,11 +58,35 @@ public class DaringAgent implements Agent{
 				
 		//get utilities for each players stack of cards
 		Map<String, Integer> stackInfo = stacksInfo(s);
+		
+		System.out.println("----------------------------------------------");
+		System.out.println("STACK INFO : " + stackInfo);
+		System.out.println("THIS HINTS : " + playersHints.get(index));
+		System.out.println("NUM CARDS: " + numCards + " NUM PLAYERS: " + numPlayers);
+		System.out.println("HINTS SIZE : " + playersHints.size());
+		
+		for(int i = 0; i < playersHints.size(); i++)
+		{
+			System.out.println(playersHints.get(i));
+		}
+		
+		System.out.println("----------------------------------------------");
+		
 		thisUtility(s, stackInfo);
 		otherUtility(s, stackInfo);
+				
+		for(int i = 0; i < playersUtilities.length; i++)
+		{
+			for(int j = 0; j < playersUtilities[i].length; j++)
+			{
+				System.out.print(playersUtilities[i][j] + " ");
+			}
+			System.out.println();
+		}
+		System.out.println("----------------------------------------------");
 		
 		//if no hints have been given to this agent - give a hint to a player
-		if(playersHints.isEmpty())
+		if(playersHints.get(index).isEmpty())
 		{
 			try 
 			{
@@ -70,7 +94,6 @@ public class DaringAgent implements Agent{
 			} 
 			catch (IllegalActionException e) 
 			{
-				System.out.println("GREEDY SEARCH HAS FAILED");
 				e.printStackTrace();
 			}
 		}
@@ -87,6 +110,7 @@ public class DaringAgent implements Agent{
 				e.printStackTrace();
 			}
 		}
+		
 		
 		return null;
 	}
@@ -112,6 +136,11 @@ public class DaringAgent implements Agent{
 	      values = new int[5];
 	      numCards = 5;
 	      playersUtilities = new int[numPlayers][5];
+	    }
+	    
+	    for(int i = 0; i < numPlayers; i++)
+	    {
+	    	playersHints.add(new HashSet<String>());
 	    }
 	    
 	    index = s.getNextPlayer();
@@ -143,15 +172,40 @@ public class DaringAgent implements Agent{
 	          //save it to the appropriate HashSet for the relevant player
 	          if(a.getType()==ActionType.HINT_COLOUR){
 	        	  int playerIndex = a.getHintReceiver();
-	        	  HashSet<String> memory = playersHints.get(playerIndex);
-	        	  memory.add(hint2string(a.getHintReceiver(),0,a.getColour(),a.getHintedCards()));
+	        	  
+	        	  if(playerIndex == index){
+	        		  System.out.println("-------------------------------");
+	        		  System.out.println("THIS AGENT GOT A HINT!!");
+	        	  }
+	        	  
+	        	  
+	        	  if( playersHints.get(playerIndex).isEmpty()){
+	        		  playersHints.add(new HashSet<String>());
+	        	  }
+        		  HashSet<String> memory = playersHints.get(playerIndex);
+        		  memory.add(hint2string(playerIndex,0,a.getColour(),a.getHintedCards()));
+	        	  System.out.println(playersHints.get(playerIndex));
+	        	  
+	        	  
 	          }
 	          //if a hint about the value of a card is given
 	          //save it to the appropriate HashSet for the relevant player
 	          else if(a.getType() == ActionType.HINT_VALUE){
 	        	  int playerIndex = a.getHintReceiver();
-	        	  HashSet<String> memory = playersHints.get(playerIndex);
-	        	  memory.add(hint2string(a.getHintReceiver(),1,a.getValue(),a.getHintedCards()));
+	        	  
+	        	  if(playerIndex == index){
+	        		  System.out.println("-------------------------------");
+	        		  System.out.println("THIS AGENT GOT A HINT!!");
+	        	  }
+	        	  
+	        	  
+	        	  if( playersHints.get(playerIndex).isEmpty()){
+	        		  playersHints.add(new HashSet<String>());
+	        	  }
+        		  HashSet<String> memory = playersHints.get(playerIndex);
+        		  memory.add(hint2string(playerIndex,1,a.getValue(),a.getHintedCards()));
+	        	  System.out.println(playersHints.get(playerIndex));
+
 	          }
 	          	          
 	          //go to the previous state
@@ -305,9 +359,9 @@ public class DaringAgent implements Agent{
 	public void thisUtility(State currentState, Map<String, Integer> struct)
 	{
 		int[] cardUtilities = new int[numCards];
-		
+				
 		for(int i = 0; i < numCards; i++)
-		{
+		{			
 			//default value - set to two
 			//initialise each card to a value of 2
 			cardUtilities[i] = 2;			
@@ -343,6 +397,7 @@ public class DaringAgent implements Agent{
 		}
 		
 		playersUtilities[index] = cardUtilities;
+	
 		
 	}
 	
@@ -423,11 +478,11 @@ public class DaringAgent implements Agent{
 	 * @param hand - the hand to check for the above colour
 	 */
 	public boolean[] sameColour(Colour c, Card[] hand)
-	{
+	{		
 		boolean[] bool = new boolean[hand.length];
 		for(int i = 0; i < hand.length; i++)
 		{
-			if(hand[i].getColour().toString().equals(c))
+			if(hand[i].getColour().toString().equals(c.toString()))
 			{
 				bool[i] = true;
 			}
@@ -469,22 +524,32 @@ public class DaringAgent implements Agent{
 	 */
 	public Action bestHint(State currentState) throws IllegalActionException
 	{
+		System.out.println("In Best Hint!");
 		for(int i = 0; i < numPlayers; i++)
 		{
 			if(i == index) {continue;}
 			
 			int[] utility = playersUtilities[i];
+			Card[] hand = currentState.getHand(i);
+			System.out.println("Players " + i + " Utility Array " + Arrays.toString(playersUtilities[i]));
+			System.out.println("Players " + i + " Actual hand " + Arrays.toString(hand));
 			
 			for(int j = 0; j < utility.length; j++)
 			{
-				Card[] hand = currentState.getHand(i);
-				
 				if(utility[j] == 5)
 				{
+					System.out.println("Given Hint To Card : " + hand[j].toString() + "? : " + inMemory(i, 0, hand[j]));
+					
 					if(Math.random() < 0.5 && !inMemory(i, 0, hand[j])) {
+						System.out.println("hint colour");
+						
+						System.out.println("CARD : " + hand[j].toString());
+						System.out.println("HAND : " + Arrays.toString(sameColour(hand[j].getColour(),hand)));
+						
 						return new Action(index, toString(), ActionType.HINT_COLOUR, i, sameColour(hand[j].getColour(),hand), hand[j].getColour());
 					}
-					else if (Math.random() >= 5 && !inMemory(i, 1, hand[j])){
+					else if (Math.random() >= 0.5 && !inMemory(i, 1, hand[j])){
+						System.out.println("hint value");
 						return new Action(index, toString(), ActionType.HINT_VALUE, i, sameValue(hand[j].getValue(), hand), hand[j].getValue());
 					}
 				}
@@ -496,7 +561,7 @@ public class DaringAgent implements Agent{
 		
 		int randomPlayer = (int) (Math.random() * numPlayers);
 		int randomCard = (int) (Math.random() * numCards);
-		
+		System.out.println("random hint");
 		return new Action(index, toString(), ActionType.HINT_VALUE, randomPlayer, sameValue(currentState.getHand(randomPlayer)[randomCard].getValue(), currentState.getHand(randomPlayer)), currentState.getHand(randomPlayer)[randomCard].getValue());
 	}
 
@@ -505,7 +570,16 @@ public class DaringAgent implements Agent{
 	 */
 	public boolean inMemory(int receiver, int colOrVal, Card thiscard)
 	{
-		return playersHints.get(receiver).contains(hint2string(receiver,colOrVal,thiscard));
+		if(playersHints.get(receiver).isEmpty())
+		{
+			return false;
+		}
+		else
+		{
+			return playersHints.get(receiver).contains(hint2string(receiver,colOrVal,thiscard));
+		}
+		
+		
 	}
 	
 	/**
