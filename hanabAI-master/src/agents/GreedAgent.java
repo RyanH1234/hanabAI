@@ -1054,7 +1054,7 @@ public class GreedAgent implements Agent{
 						}
 					}
 				}
-				if(worthrisk==1) {return 2;}
+				if(worthrisk>=1) {return 2;}
 			}
 
 		}
@@ -1178,7 +1178,7 @@ public class GreedAgent implements Agent{
 						if(thisworks.peek().getValue()==(v)) {worthrisk=1;}
 					}
 				}
-				if(worthrisk==1) {return 2;}
+				if(worthrisk>=1) {return 2;}
 			}
 			
 
