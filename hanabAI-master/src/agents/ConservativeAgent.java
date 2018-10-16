@@ -235,18 +235,8 @@ public class ConservativeAgent implements Agent{
 	    numPlayers = s.getPlayers().length;
 	    
 	    memory = new HashSet<String>();
-	    /**
-	    if(numPlayers>3){
-	        colours = new Colour[4];
-	        values = new int[4];
-	      }
-	      else{
-	        colours = new Colour[5];
-	        values = new int[5];
-	      }
-	      **/
 	    
-	    if(numPlayers==5){
+	    if(numPlayers>=5){
 	      colours = new Colour[4];
 	      values = new int[4];
 	      utility = new int[4];
@@ -331,13 +321,6 @@ public class ConservativeAgent implements Agent{
 		//number of empty stacks
 		int numEmptyStacks = 0;
 				
-		//variables which record the size of each stack
-		int blueSize = 0;
-		int GreenSize = 0;
-		int redSize = 0;
-		int whiteSize = 0;
-		int yellowSize = 0;
-		
 		//initialise variables for each of the stacks 
 		Stack<Card> blueStack = s.getFirework(Colour.BLUE);
 		Stack<Card> greenStack = s.getFirework(Colour.GREEN);
@@ -628,11 +611,7 @@ public class ConservativeAgent implements Agent{
 	 * @param thiscard  - the card which the hint relates to
 	 * @return a string representation of the hint
 	 */
-	public String hint2string(int receiver, int colOrVal, Card thiscard)
-	{
-		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+thiscard.toString();
-		return memkey;
-	}
+
 	public String hint2string(int receiver, int colOrVal, Colour c, boolean[] hand)
 	{
 		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+c.toString()+Arrays.toString(hand);
@@ -643,16 +622,7 @@ public class ConservativeAgent implements Agent{
 		String memkey = Integer.toString(receiver)+Integer.toString(colOrVal)+Integer.toString(val)+Arrays.toString(hand);
 		return memkey;
 	}
-	
-	/**
-	 * @return - true if the hint has been given (i.e. is in memory) or false if the hint has not been given
-	 */
-	public boolean inMemory(int receiver, int colOrVal, Card thiscard)
-	{
-		return memory.contains(hint2string(receiver,colOrVal,thiscard));
-	}
-	
-	
+
 	/**
 	 * @return returns the string representation of this agent's name 
 	 */
