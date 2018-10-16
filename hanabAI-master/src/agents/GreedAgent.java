@@ -35,6 +35,8 @@ public class GreedAgent implements Agent{
 	private int[][] othervalues;
 	private Colour[][] othercolours;
 	
+	private int cardsplayed;
+	
 	int counter = 0;
 	
 	@Override
@@ -71,13 +73,14 @@ public class GreedAgent implements Agent{
 						//re-initialise relevant hint arrays..
 				        colours[i] = null;
 				        values[i] = 0;
+				        cardsplayed+=1;
 						return new Action(index, toString(), ActionType.PLAY, i);
 					} 
 					catch (IllegalActionException e) 
 					{
 						e.printStackTrace();
 					}
-			}
+			}else
 			if(utility[i] == 4)
 			{ 
 				Card tempcard = new Card(colours[i],values[i]);
@@ -87,6 +90,43 @@ public class GreedAgent implements Agent{
 						//re-initialise relevant hint arrays..
 				        colours[i] = null;
 				        values[i] = 0;
+				        cardsplayed+=1;
+						return new Action(index, toString(), ActionType.PLAY, i);
+					} 
+					catch (IllegalActionException e) 
+					{
+						e.printStackTrace();
+					}
+				}
+			}else
+			if(utility[i] == 3&&cardsplayed>=15)
+			{ 
+				int possiblecard = thinkengine(s,i);
+				if(possiblecard==1)
+				{
+					Card tempcard = new Card(colours[i],values[i]);
+					if(playable(s,tempcard) == 1)
+					{
+						try {
+							//re-initialise relevant hint arrays..
+					        colours[i] = null;
+					        values[i] = 0;
+					        cardsplayed+=1;
+							return new Action(index, toString(), ActionType.PLAY, i);
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}
+				}
+				if(possiblecard==2&&s.getHintTokens()>1)//50% chance card is playable
+				{
+					try {
+						//re-initialise relevant hint arrays..
+				        colours[i] = null;
+				        values[i] = 0;
+				        cardsplayed+=1;
 						return new Action(index, toString(), ActionType.PLAY, i);
 					} 
 					catch (IllegalActionException e) 
@@ -273,6 +313,7 @@ public class GreedAgent implements Agent{
 		{
 	        colours[minIndex] = null;
 	        values[minIndex] = 0;
+	        cardsplayed+=1;
 			return new Action(index, toString(), ActionType.DISCARD,minIndex);
 		} 
 		catch (IllegalActionException e) 
@@ -315,6 +356,7 @@ public class GreedAgent implements Agent{
 	    firstAction = false;
 	    
 	    memory.clear();
+	    cardsplayed=0;
 	}
 
 	/**
@@ -339,6 +381,7 @@ public class GreedAgent implements Agent{
 	        	  //update other player values based on their moves
 	        	  othercolours[a.getPlayer()][a.getCard()]=null;
 	        	  othervalues[a.getPlayer()][a.getCard()]=0;
+	        	  cardsplayed+=1;
 	          }
 	          
 	          //~add previous player's hints to memory too
@@ -532,6 +575,8 @@ public class GreedAgent implements Agent{
 			{
 				utility[i] = 3;
 			}
+			
+
 			
 			//if we know we have a one and the number of empty stacks is 5
 			if(values[i] == 1 && struct.get("EMPTYSTACKS") == 5)
@@ -848,5 +893,297 @@ public class GreedAgent implements Agent{
         }
       }
 	  return null;
+	}
+	
+	
+	public int thinkengine(State s, int cindex)
+	//given a card with partial knowledge in hint memory
+	//get firework stack, graveyard stack and all other player hands, count the cards up that have the same known value
+	//try to interpolate the unknown value from knowns
+	//returns iff we were able to work out the missing info of a card
+	{
+		//if value is known, look for all cards of that value, enumerate them based on colour, see what's left
+		if(values[cindex]!=0)
+		{
+			int[] counter = {0,0,0,0,0}; //that card in each of the 5 colours RBGYW
+			boolean[] possible = {false,false,false,false,false};
+			Stack<Card> discards = s.getDiscards();
+			
+			Stack<Card> rworks = s.getFirework(Colour.RED);
+			Stack<Card> bworks = s.getFirework(Colour.BLUE);
+			Stack<Card> gworks = s.getFirework(Colour.GREEN);
+			Stack<Card> yworks = s.getFirework(Colour.YELLOW);
+			Stack<Card> wworks = s.getFirework(Colour.WHITE);
+			
+			Card temp;
+			while(!discards.isEmpty())
+			{
+				temp=discards.pop();
+				if(temp.getValue()==values[cindex])
+				{
+					switch(temp.getColour())
+					{
+					case RED:
+						counter[0]+=1;
+					case BLUE:
+						counter[1]+=1;
+					case GREEN:
+						counter[2]+=1;
+					case YELLOW:
+						counter[3]+=1;
+					case WHITE:
+						counter[4]+=1;
+					}
+					
+						
+				}
+			}
+			if(!rworks.isEmpty())
+				{
+					if(rworks.peek().getValue()>=values[cindex])
+					{counter[0]+=1;}
+				}
+			if(!bworks.isEmpty())
+			{
+				if(bworks.peek().getValue()>=values[cindex])
+				{counter[0]+=1;}
+			}
+			if(!gworks.isEmpty())
+			{
+				if(gworks.peek().getValue()>=values[cindex])
+				{counter[0]+=1;}
+			}
+			if(!yworks.isEmpty())
+			{
+				if(yworks.peek().getValue()>=values[cindex])
+				{counter[0]+=1;}
+			}
+			if(!wworks.isEmpty())
+			{
+				if(wworks.peek().getValue()>=values[cindex])
+				{counter[0]+=1;}
+			}
+			Card[] temphand;
+			for(int i = 0;i<numPlayers;i++)
+			{
+				if(i==index) {continue;}
+				temphand = s.getHand(i);
+				for(int j = 0;j<numCards;j++)
+				{
+					if(temphand[j]!=null&&temphand[j].getValue()==values[cindex])
+					{
+						switch(temphand[j].getColour())
+						{
+						case RED:
+							counter[0]+=1;
+						case BLUE:
+							counter[1]+=1;
+						case GREEN:
+							counter[2]+=1;
+						case YELLOW:
+							counter[3]+=1;
+						case WHITE:
+							counter[4]+=1;
+						}
+					}
+				}
+			}
+			//enumeration complete
+			//now go through possibility array
+
+			//if value is known
+			//how many " a " of a card is there in one colour? that depends on the value!
+			int a = 0;
+			if(values[cindex]==1) {a=3;}
+			else if(values[cindex]==2||values[cindex]==3||values[cindex]==4) {a=2;}
+			else if(values[cindex]==5) {a=1;}
+			
+			if(counter[0]!=a){possible[0]=true;}
+			if(counter[1]!=a){possible[1]=true;}
+			if(counter[2]!=a){possible[2]=true;}
+			if(counter[3]!=a){possible[3]=true;}
+			if(counter[4]!=a){possible[4]=true;}
+			int poss=boolcount(possible);
+			if(poss==1)
+			{
+				if(possible[0]) {colours[cindex]=Colour.RED;}
+				else if(possible[1]) {colours[cindex]=Colour.BLUE;}
+				else if(possible[2]) {colours[cindex]=Colour.GREEN;}
+				else if(possible[3]) {colours[cindex]=Colour.YELLOW;}
+				else if(possible[4]) {colours[cindex]=Colour.WHITE;}
+				return 1;
+			}else if(poss==2)
+			//{return 0;}
+			{//else suggest a risky move
+				int worthrisk=0;
+				for(int v=0;v<5;v++)
+				{
+					if(possible[v]) {
+						switch(v)
+						{
+						case 0:
+							if(!rworks.isEmpty())
+							{
+								if(rworks.peek().getValue()==(values[cindex]-1))
+								{worthrisk+=1;}
+							}
+						case 1:
+							if(!bworks.isEmpty())
+							{
+								if(bworks.peek().getValue()==(values[cindex]-1))
+								{worthrisk+=1;}
+							}
+						case 2:
+							if(!gworks.isEmpty())
+							{
+								if(gworks.peek().getValue()==(values[cindex]-1))
+								{worthrisk+=1;}
+							}
+						case 3:
+							if(!yworks.isEmpty())
+							{
+								if(yworks.peek().getValue()==(values[cindex]-1))
+								{worthrisk+=1;}
+							}
+						case 4:
+							if(!wworks.isEmpty())
+							{
+								if(wworks.peek().getValue()==(values[cindex]-1))
+								{worthrisk+=1;}
+							}
+						}
+					}
+				}
+				if(worthrisk==2) {return 2;}
+			}
+
+		}
+		//if colour is known, look for all cards of that colour, enumerate and see what's left
+		else if(colours[cindex]!=null)
+		{
+			int[] counter = {0,0,0,0,0}; //cards of value 1,2,3,4,5
+			boolean[] possible = {false,false,false,false,false};
+			
+			Stack<Card> discards = s.getDiscards();
+			
+			Stack<Card> rworks = s.getFirework(Colour.RED);
+			Stack<Card> bworks = s.getFirework(Colour.BLUE);
+			Stack<Card> gworks = s.getFirework(Colour.GREEN);
+			Stack<Card> yworks = s.getFirework(Colour.YELLOW);
+			Stack<Card> wworks = s.getFirework(Colour.WHITE);
+			
+			Card temp;
+			while(!discards.isEmpty())
+			{
+				temp=discards.pop();
+				if(temp.getColour()==colours[cindex])
+				{
+					switch(temp.getValue())
+					{
+					case 1:
+						counter[0]+=1;
+					case 2:
+						counter[1]+=1;
+					case 3:
+						counter[2]+=1;
+					case 4:
+						counter[3]+=1;
+					case 5:
+						counter[4]+=1;
+					}
+					
+						
+				}
+			}
+			Stack<Card> thisworks = null;
+			switch(colours[cindex])
+			{
+			case RED:
+				thisworks = rworks;
+			case BLUE:
+				thisworks = bworks;
+			case GREEN:
+				thisworks = gworks;
+			case YELLOW:
+				thisworks = yworks;
+			case WHITE:
+				thisworks = wworks;
+			}
+			if(!thisworks.isEmpty())
+			{
+				int t = thisworks.peek().getValue();
+				switch(t)
+				{
+				case 1:
+					counter[0]+=1;
+				case 2:
+					counter[1]+=1;
+				case 3:
+					counter[2]+=1;
+				case 4:
+					counter[3]+=1;
+				case 5:
+					counter[4]+=1;
+				}
+			}
+			Card[] temphand;
+			for(int i = 0;i<numPlayers;i++)
+			{
+				if(i==index) {continue;}
+				temphand = s.getHand(i);
+				for(int j = 0;j<numCards;j++)
+				{
+					if(temphand[j]!=null&&temphand[j].getColour()==colours[cindex])
+					{
+						switch(temphand[j].getValue())
+						{
+						case 1:
+							counter[0]+=1;
+						case 2:
+							counter[1]+=1;
+						case 3:
+							counter[2]+=1;
+						case 4:
+							counter[3]+=1;
+						case 5:
+							counter[4]+=1;
+						}
+					}
+				}
+			}
+			
+			//if colour is known,
+			//so how many of each card is in one colour? as follows:
+			if(counter[0]!=3) {possible[0]=true;}
+			if(counter[1]!=2) {possible[1]=true;}
+			if(counter[2]!=2) {possible[2]=true;}
+			if(counter[3]!=2) {possible[3]=true;}
+			if(counter[4]!=1) {possible[4]=true;}
+			int poss = boolcount(possible);
+			if(poss==1)
+			{
+				if(possible[0]) {values[cindex]=1;}
+				else if(possible[1]) {values[cindex]=2;}
+				else if(possible[2]) {values[cindex]=3;}
+				else if(possible[3]) {values[cindex]=4;}
+				else if(possible[4]) {values[cindex]=5;}
+				return 1;
+			}else if(poss==2)
+			//{return 0;}
+			{//else suggest a risky move
+				int worthrisk=0;
+				for(int v=0;v<5;v++)
+				{
+					if(possible[v]) {
+						if(thisworks.peek().getValue()==(v)) {worthrisk=1;}
+					}
+				}
+				if(worthrisk==1) {return 2;}
+			}
+			
+
+		}
+		
+		return 0;
 	}
 }
