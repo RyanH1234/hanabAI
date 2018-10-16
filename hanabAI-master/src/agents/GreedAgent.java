@@ -1054,7 +1054,7 @@ public class GreedAgent implements Agent{
 						}
 					}
 				}
-				if(worthrisk==2) {return 2;}
+				if(worthrisk==1) {return 2;}
 			}
 
 		}
