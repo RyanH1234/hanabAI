@@ -1,0 +1,157 @@
+		//else - find the utilities of the other players
+		//if there is a utility of 4 returned for any of the OTHER players cards
+		//give a hint to that card IFF you haven't given the same hint before
+		for(int i = 0; i < numPlayers; i++)
+		{
+			//i == player index
+			
+			//if we have no more hint tokens left..
+			if(s.getHintTokens() <= 0)
+			{
+				break;
+			}
+			
+			//if the current index is your own hand - skip it
+			if(i == index)
+			{
+				continue;
+			}
+			
+			//get the current hand of the player
+			Card[] playersHand = s.getHand(i);
+			
+			System.out.println("PLAYER " + i);
+			System.out.println(Arrays.toString(playersHand));
+			
+			//get the utilities for that player's hand
+			int[] playersUtility = otherHandsUtility(s, playersHand, struct);
+			
+			//if any of the utilities are 4 - give a hint ONLY IF you have NOT given hint before
+			for(int j = 0; j < playersUtility.length; j++)
+			{
+				if(playersUtility[j] == 4)
+				{
+					//get the card this utility is pointing to
+					Card playableCard = playersHand[j];
+					
+					//check if you have given a hint about this card before to this specific player
+					//give a hint to the player
+					//0 -> hint colour, 1-> hint value
+					
+					//int hinttype;
+					//if(Math.random()>0.5) {hinttype=0;}else{hinttype=1;}
+					boolean[] h1c = makecolourbool(playersHand, playableCard);
+					boolean[] h2c = makevalbool(playersHand, playableCard);
+					//if this hint is not in memory
+					if(!memory.contains(hint2string(i,1,playableCard.getValue(),h2c)))
+					{
+						try 
+						{
+							memory.add(hint2string(i,1,playableCard.getValue(),h2c));
+							return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playableCard.getValue());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}else if(!memory.contains(hint2string(i,0,playableCard.getColour(),h1c))) 
+					{
+						try {
+							//return the action to do a hint
+							memory.add(hint2string(i,0,playableCard.getColour(),h1c));
+							return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playableCard.getColour());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}
+				}
+				//~Hint tokens cannot exceed 8, our agents should now also give hints for hands that will reveal the most amount of info
+				else //if(s.getHintTokens()>=1)
+				{
+					Card playableCard;
+					switch(playersUtility[j])
+					{
+					case 30: 
+						playableCard = playersHand[j];
+						boolean[] h1c = makecolourbool(playersHand, playableCard);
+						try {
+							//return the action to do a hint
+							memory.add(hint2string(i,0,playableCard.getColour(),h1c));
+							return new Action(index,toString(),ActionType.HINT_COLOUR,i,h1c,playableCard.getColour());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					
+					case 31:
+						playableCard = playersHand[j];
+						boolean[] h2c = makevalbool(playersHand, playableCard);
+						try 
+						{
+							memory.add(hint2string(i,1,playableCard.getValue(),h2c));
+							return new Action(index,toString(),ActionType.HINT_VALUE,i,h2c,playableCard.getValue());
+						} 
+						catch (IllegalActionException e) 
+						{
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+			
+			
+			if(values[cindex]>1&&values[cindex]<5)
+			{
+				int x=0;
+				while(x<5) {
+					if(counter[x]!=2){possible[x]=true;}
+					x++;
+				}
+			}
+			
+			
+			
+			else if(possiblecard<3&&s.getHintTokens()>1)
+				{
+					//RISKY MOVE!
+					//DECIDE if it's worth playing
+					try {
+						//re-initialise relevant hint arrays..
+				        colours[i] = null;
+				        values[i] = 0;
+				        cardsplayed+=1;
+						return new Action(index, toString(), ActionType.PLAY, i);
+					} 
+					catch (IllegalActionException e) 
+					{
+						e.printStackTrace();
+					}
+				}
+				
+				
+				
+				
+				
+			{
+				//suggest a risky move
+				if(poss==2)
+				{
+					if(!rworks.isEmpty()&&rworks.peek().getValue()==(values[cindex])-1){backups[0]=true;}
+					if(!bworks.isEmpty()&&bworks.peek().getValue()==(values[cindex])-1){backups[1]=true;}
+					if(!gworks.isEmpty()&&gworks.peek().getValue()==(values[cindex])-1){backups[2]=true;}
+					if(!yworks.isEmpty()&&yworks.peek().getValue()==(values[cindex])-1){backups[3]=true;}
+					if(!wworks.isEmpty()&&wworks.peek().getValue()==(values[cindex])-1){backups[4]=true;}
+					
+					int playfirst =0;
+					if(Math.random()>0.5) {playfirst=1;}
+					for(int v=0;v<5;v++)
+					{
+						if(playfirst==0) {playfirst=1;continue;}
+						else {return v+10;}
+					}
+				}
+				
+			}

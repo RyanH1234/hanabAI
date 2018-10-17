@@ -199,6 +199,21 @@ public class ConservativeAgent implements Agent{
 			
 		}
 		
+		//if we get here and we haven't given a hint despite having 8 hint tokens, do a random hint!
+		if(s.getHintTokens() == 8)
+		{
+			try 
+			{
+				Action randoma = randhint(s);
+
+				return randoma;
+			} 
+			catch (IllegalActionException e) 
+			{
+				e.printStackTrace();
+			}
+		}
+		
 		int minIndex = 0;
 		int minValue = Integer.MAX_VALUE;
 		//else, if all else fails - discard a card
@@ -238,7 +253,7 @@ public class ConservativeAgent implements Agent{
 	    
 	    memory = new HashSet<String>();
 	    
-	    if(numPlayers>=5){
+	    if(numPlayers>3){
 	      colours = new Colour[4];
 	      values = new int[4];
 	      utility = new int[4];
@@ -687,6 +702,40 @@ public class ConservativeAgent implements Agent{
 		    sum += b ? 1 : 0;
 		}
 		return sum;
+	}
+	
+	/*
+	 * Important: There may be times when the agent doesn't see any highly valuable hints to give, but the hint tokens
+	 * are already at 8 and the game rules say hint tokens cannot go above 8
+	 * ergo, we bring the random hint utility and use it as a last resort
+	 */
+	public Action randhint(State s) throws IllegalActionException
+	{
+      for(int i = 1; i<numPlayers; i++){
+        int hintee = (index+i)%numPlayers;
+        Card[] hand = s.getHand(hintee);
+        for(int j = 0; j<hand.length; j++){
+          Card c = hand[j];
+          if(c!=null){
+            //flip coin
+            if(Math.random()>0.5){//give colour hint
+              boolean[] col = new boolean[hand.length];
+              for(int k = 0; k< col.length; k++){
+                col[k]=c.getColour().equals((hand[k]==null?null:hand[k].getColour()));
+              }
+              return new Action(index,toString(),ActionType.HINT_COLOUR,hintee,col,c.getColour());
+            }
+            else{//give value hint
+              boolean[] val = new boolean[hand.length];
+              for(int k = 0; k< val.length; k++){
+                val[k]=c.getValue() == (hand[k]==null?-1:hand[k].getValue());
+              }
+              return new Action(index,toString(),ActionType.HINT_VALUE,hintee,val,c.getValue());
+            }
+          }
+        }
+      }
+	  return null;
 	}
 	
 }
