@@ -44,7 +44,10 @@ public class GreedAgent implements Agent{
 		
 		//DEBUGGING
 		counter++;
-
+		System.out.println("-------------------");
+		System.out.println("ROUND : " + counter + " CURRENT INDEX " + index + " TOKENS " + s.getHintTokens());
+		System.out.println("-------------------");
+		
 		//initialise the state of the game
 		if(firstAction)
 		{
@@ -96,7 +99,7 @@ public class GreedAgent implements Agent{
 					}
 				}
 			}else
-			if(utility[i] == 3&&cardsplayed>=25)
+			if(utility[i] == 3&&cardsplayed>=15)
 			{ 
 				int possiblecard = thinkengine(s,i);
 				if(possiblecard==1)
@@ -193,6 +196,9 @@ public class GreedAgent implements Agent{
 			}
 			
 			
+			
+			System.out.println("PLAYER " + i);
+			System.out.println(Arrays.toString(playersHand));
 			
 			//get the utilities for that player's hand
 			int[] playersUtility = otherHandsUtility(s, playersHand, struct);
@@ -330,7 +336,7 @@ public class GreedAgent implements Agent{
 	    numPlayers = s.getPlayers().length;
 	    memory = new HashSet<String>();
 	    
-	    if(numPlayers>3){
+	    if(numPlayers==5){
 	      colours = new Colour[4];
 	      values = new int[4];
 	      utility = new int[4];
@@ -844,6 +850,15 @@ public class GreedAgent implements Agent{
 					return new int[]{1,i};
 				}
 			}
+			/*
+			else if(othercolours[playerno][i] == null && othervalues[playerno][i] == 0)
+			{
+				if(playable(s,realhand[i])==1)
+				{
+					//this player knows nothing about the card, but it is playable!
+					return new int[]{2,i};
+				}
+			}*/
 		}
 		return new int[]{-1};
 	}
@@ -893,23 +908,6 @@ public class GreedAgent implements Agent{
 			int[] counter = {0,0,0,0,0}; //that card in each of the 5 colours RBGYW
 			boolean[] possible = {false,false,false,false,false};
 			Stack<Card> discards = s.getDiscards();
-			
-			//also check your own hand if you have any cards that you know both values/colours but are not playable???
-			for(int k = 0;k<numCards;k++)
-			{
-				if(k==cindex) {continue;}
-				if(colours[k]!=null&&values[k]==values[cindex])
-				{
-					switch(colours[k])
-					{
-					case RED: counter[0]+=1;
-					case BLUE: counter[1]+=1;
-					case GREEN: counter[2]+=1;
-					case YELLOW: counter[3]+=1;
-					case WHITE: counter[4]+=1;
-					}
-				}
-			}
 			
 			Stack<Card> rworks = s.getFirework(Colour.RED);
 			Stack<Card> bworks = s.getFirework(Colour.BLUE);
@@ -1067,23 +1065,6 @@ public class GreedAgent implements Agent{
 			boolean[] possible = {false,false,false,false,false};
 			
 			Stack<Card> discards = s.getDiscards();
-			
-			//check your own hand also
-			for (int k = 0;k<numCards;k++)
-			{
-				if(k==cindex) {continue;}
-				if((colours[k]!=null)&&values[k]!=0&&colours[k]==colours[cindex])
-				{
-					switch(values[k])
-					{
-					case 1: counter[0]+=1;
-					case 2: counter[1]+=1;
-					case 3: counter[2]+=1;
-					case 4: counter[3]+=1;
-					case 5: counter[4]+=1;
-					}
-				}
-			}
 			
 			Stack<Card> rworks = s.getFirework(Colour.RED);
 			Stack<Card> bworks = s.getFirework(Colour.BLUE);
