@@ -80,11 +80,9 @@ public class Hanabi{
    * The agent implementations should be in the default package.
    * */
   public static void main(String[] args){
-<<<<<<< HEAD
-    Agent[] agents = {new agents.GreedAgent(),new agents.GreedAgent(), new agents.GreedAgent(), new agents.GreedAgent()};
-=======
-    Agent[] agents = {new agents.SelfRecognitionAgent(),new agents.SelfRecognitionAgent(), new agents.SelfRecognitionAgent()};
->>>>>>> 94281796abdfbc106e294fd6508d94bd285423dd
+  
+    Agent[] agents = {new agents.BasicAgent(), new agents.BasicAgent(), new agents.BasicAgent(), new agents.BasicAgent(),new agents.BasicAgent()};
+
     Hanabi game= new Hanabi(agents);
     StringBuffer log = new StringBuffer("A simple game for three basic agents:\n");
     int result = game.play(log);

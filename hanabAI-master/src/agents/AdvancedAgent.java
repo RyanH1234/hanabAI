@@ -13,7 +13,7 @@ import hanabAI.Colour;
 import hanabAI.IllegalActionException;
 import hanabAI.State;
 
-public class GreedAgent implements Agent{
+public class AdvancedAgent implements Agent{
 
 	//records whether this is the first action the agent is taken
 	private boolean firstAction = true;
