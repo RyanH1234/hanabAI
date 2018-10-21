@@ -82,26 +82,14 @@ public class Hanabi{
    * */
   public static void main(String[] args){
    
-	double sum = 0.0;  
-	  
-	for(int i = 0; i < 1000; i++)
-	{
-		Agent[] agents = {new agents.ConservativeAgent(),new agents.ConservativeAgent(), new agents.ConservativeAgent()};
-	    Hanabi game= new Hanabi(agents);
-	    StringBuffer log = new StringBuffer("A simple game for three basic agents:\n");
-	    int result = game.play(log);
-	    sum += (double)result;
-	    log.append("The final score is "+result+".\n");
-	    log.append(critique(result));
-	    System.out.print(log);
-	}
-	
+	Agent[] agents = {new agents.ConservativeAgent21969062(),new agents.ConservativeAgent21969062(), new agents.ConservativeAgent21969062()};
+	Hanabi game= new Hanabi(agents);
+	StringBuffer log = new StringBuffer("A simple game for three basic agents:\n");
+	int result = game.play(log);
+	log.append("The final score is "+result+".\n");
+	log.append(critique(result));
+	System.out.print(log);
 
-	
-	System.out.println("Average: " + sum/1000);
-	
-
-	
 	  
   }
 }

@@ -13,7 +13,12 @@ import hanabAI.Colour;
 import hanabAI.IllegalActionException;
 import hanabAI.State;
 
-public class AdvancedAgent implements Agent{
+
+/**
+ * @author Jonathan Kok
+ * @author Ryan Hodgson 21969062
+ */
+public class AdvancedAgent21969062 implements Agent{
 
 	//records whether this is the first action the agent is taken
 	private boolean firstAction = true;
