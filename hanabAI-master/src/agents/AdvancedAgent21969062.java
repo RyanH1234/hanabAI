@@ -15,7 +15,7 @@ import hanabAI.State;
 
 
 /**
- * @author Jonathan Kok
+ * @author Jonathan Kok 20744321
  * @author Ryan Hodgson 21969062
  */
 public class AdvancedAgent21969062 implements Agent{
