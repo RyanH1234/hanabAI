@@ -36,13 +36,7 @@ public class ConservativeAgent implements Agent{
 	
 	@Override
 	public Action doAction(State s){
-		
-		//DEBUGGING
-		counter++;
-		System.out.println("-------------------");
-		System.out.println("ROUND : " + counter + " CURRENT INDEX " + index + " TOKENS " + s.getHintTokens());
-		System.out.println("-------------------");
-		
+	
 		//initialise the state of the game
 		if(firstAction)
 		{
@@ -113,10 +107,7 @@ public class ConservativeAgent implements Agent{
 			
 			//get the current hand of the player
 			Card[] playersHand = s.getHand(i);
-			
-			System.out.println("PLAYER " + i);
-			System.out.println(Arrays.toString(playersHand));
-			
+						
 			//get the utilities for that player's hand
 			int[] playersUtility = otherHandsUtility(s, playersHand, struct);
 			
@@ -237,7 +228,6 @@ public class ConservativeAgent implements Agent{
 			e.printStackTrace();
 		}
 		
-		//SHOULD THIS BE HERE??
 		return null;
 		
 	
@@ -249,6 +239,8 @@ public class ConservativeAgent implements Agent{
 	 */
 	public void init(State s)
 	{
+		System.out.println("INIT");
+		
 	    numPlayers = s.getPlayers().length;
 	    
 	    memory = new HashSet<String>();
