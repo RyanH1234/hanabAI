@@ -17,7 +17,7 @@ import hanabAI.State;
  * @author Jonathan Kok 20744321
  * @author Ryan Hodgson 21969062
  */
-public class ConservativeAgent21969062 implements Agent{
+public class Agent20744321 implements Agent{
 
 	//records whether this is the first action the agent is taken
 	private boolean firstAction = true;
@@ -641,7 +641,7 @@ public class ConservativeAgent21969062 implements Agent{
 	 */
 	public String toString()
 	{
-		return "ConservativeAgent";
+		return "Agent20744321";
 	}
 	public boolean[] makecolourbool (Card[] playersHand, Card playableCard)
 	{

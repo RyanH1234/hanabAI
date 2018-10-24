@@ -82,7 +82,7 @@ public class Hanabi{
    * */
   public static void main(String[] args){
    
-	Agent[] agents = {new agents.ConservativeAgent21969062(),new agents.ConservativeAgent21969062(), new agents.ConservativeAgent21969062()};
+	Agent[] agents = {new agents.Agent20744321(),new agents.Agent20744321(), new agents.Agent20744321()};
 	Hanabi game= new Hanabi(agents);
 	StringBuffer log = new StringBuffer("A simple game for three basic agents:\n");
 	int result = game.play(log);
